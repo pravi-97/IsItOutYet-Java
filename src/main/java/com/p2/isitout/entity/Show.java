@@ -19,8 +19,8 @@ public class Show {
     private String showName;
 
     private String imdbId;
-    private Long tmdbId;
-    private Long tvmazeId;
+    private String tmdbId;
+    private String tvmazeId;
 
     private String status;
 

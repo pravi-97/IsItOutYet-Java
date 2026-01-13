@@ -9,13 +9,10 @@ import lombok.Setter;
 import java.time.Instant;
 import java.util.UUID;
 
-@Entity
-@Table(name = "users")
 @Getter
 @Setter
 public class UserDto {
 
-    @Id
     private UUID userId;
 
     private String username;
