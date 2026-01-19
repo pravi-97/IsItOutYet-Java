@@ -5,6 +5,7 @@ import java.util.UUID;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "users")
@@ -18,5 +19,6 @@ public class User {
     private String username;
     private String email;
 
+    @CreationTimestamp
     private Instant createdAt;
 }

@@ -5,6 +5,7 @@ import java.util.UUID;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "notification_log")
@@ -24,5 +25,6 @@ public class NotificationLog {
     private int retryCount;
     private Instant lastAttemptAt;
 
+    @CreationTimestamp
     private Instant triggeredAt;
 }

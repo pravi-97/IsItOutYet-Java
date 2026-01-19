@@ -2,8 +2,12 @@ package com.p2.isitout.security;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.FirebaseToken;
 import org.jspecify.annotations.NonNull;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -14,19 +18,36 @@ import java.util.UUID;
 @Service
 public class AuthService {
 
-    public void setCustomClaims(String firebaseUid, @NonNull UUID userId, List<String> roles) throws FirebaseAuthException {
+    private FirebaseToken getTokenFromContext() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof FirebaseToken token) {
+            return token;
+        }
+        throw new IllegalStateException("No Firebase token found in Security Context");
+    }
+
+    public UUID extractUserId() {
+        // Firebase claims are stored in a Map<String, Object>
+        String userId = (String) getTokenFromContext().getClaims().get("internal_user_id");
+        return userId != null ? UUID.fromString(userId) : null;
+    }
+
+    public List<String> extractRoles() {
+        return (List<String>) getTokenFromContext().getClaims().get("roles");
+    }
+
+    public String extractEmail() {
+        return getTokenFromContext().getEmail();
+    }
+    public String extractFirebaseUid() {
+        return getTokenFromContext().getUid();
+    }
+
+    public void setCustomClaims(@NonNull UUID userId, List<String> roles) throws FirebaseAuthException {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", userId.toString());
+        claims.put("internal_user_id", userId.toString());
         claims.put("roles", roles);
 
-        FirebaseAuth.getInstance().setCustomUserClaims(firebaseUid, claims);
-    }
-
-    public UUID extractUserId(Jwt jwt) {
-        return UUID.fromString(jwt.getClaim("userId"));
-    }
-
-    public List<String> extractRoles(Jwt jwt) {
-        return jwt.getClaimAsStringList("roles");
+        FirebaseAuth.getInstance().setCustomUserClaims(extractFirebaseUid(), claims);
     }
 }

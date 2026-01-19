@@ -6,6 +6,7 @@ import java.util.UUID;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "shows")
@@ -20,14 +21,21 @@ public class Show {
 
     private String imdbId;
     private String tmdbId;
-    private String tvmazeId;
+    private Integer tvmazeId;
 
     private String status;
 
     private Integer lastSeasonNumber;
+    private Integer lastEpisodeNumber;
+
+    private Integer nextSeasonNumber;
+    private Integer nextEpisodeNumber;
+
     private LocalDate nextSeasonAirDate;
     private Instant nextEpisodeAirDate;
 
     private Instant lastFetchedAt;
+
+    @CreationTimestamp
     private Instant createdAt;
 }

@@ -22,6 +22,11 @@ public class ShowDto {
     private String status;
 
     private Integer lastSeasonNumber;
+    private Integer lastEpisodeNumber;
+
+    private Integer nextSeasonNumber;
+    private Integer nextEpisodeNumber;
+
     private LocalDate nextSeasonAirDate;
     private Instant nextEpisodeAirDate;
 

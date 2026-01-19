@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import com.p2.isitout.entity.id.UserShowId;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "user_shows")
@@ -26,5 +27,6 @@ public class UserShow {
     private boolean isTracking;
     private Instant lastNotifiedEpisodeAirDate;
 
+    @CreationTimestamp
     private Instant addedAt;
 }
