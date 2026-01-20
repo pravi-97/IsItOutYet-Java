@@ -19,7 +19,6 @@ public class UserShowDto {
     private boolean notifySeasonConfirmed;
 
     private boolean isTracking;
-    private Instant lastNotifiedEpisodeAirDate;
 
     private Instant addedAt;
 }

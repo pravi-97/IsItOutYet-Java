@@ -9,15 +9,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 public class UserService {
 
-    private UserRepository userRepo;
-    private AuthService authService;
+    private final UserRepository userRepo;
+    private final AuthService authService;
     public UserService(UserRepository userRepo, AuthService authService) {
         this.userRepo = userRepo;
         this.authService = authService;
@@ -33,12 +32,14 @@ public class UserService {
                 UUID uuid = createNewUser(email);
                 authService.setCustomClaims(uuid,roles);
             }
-
+            return buildResponse(responseDto);
         }
         catch(Exception e){
-            e.printStackTrace();
+            responseDto.setMessage(e.getMessage());
+            responseDto.setStatus(false);
+            responseDto.setStatusCode(500);
+            return buildResponse(responseDto);
         }
-        return null;
     }
 
     private UUID createNewUser(String email) {

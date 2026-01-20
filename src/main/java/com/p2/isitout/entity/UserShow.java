@@ -25,7 +25,6 @@ public class UserShow {
     private boolean notifySeasonConfirmed;
 
     private boolean isTracking;
-    private Instant lastNotifiedEpisodeAirDate;
 
     @CreationTimestamp
     private Instant addedAt;

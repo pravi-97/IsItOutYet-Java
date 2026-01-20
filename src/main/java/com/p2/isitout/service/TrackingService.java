@@ -7,12 +7,12 @@ import com.p2.isitout.client.tvmaze.dto.TvMazeShowDto;
 import com.p2.isitout.dto.ResponseDTO;
 import com.p2.isitout.dto.request.TrackShowRequest;
 import com.p2.isitout.entity.Show;
+import com.p2.isitout.entity.ShowReleaseState;
 import com.p2.isitout.entity.UserShow;
+import com.p2.isitout.repository.ShowReleaseStateRepository;
 import com.p2.isitout.repository.ShowRepository;
-import com.p2.isitout.repository.UserRepository;
 import com.p2.isitout.repository.UserShowRepository;
 import com.p2.isitout.security.AuthService;
-import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -31,16 +31,17 @@ public class TrackingService {
     private final ShowRepository showRepo;
     private final TvMazeClient tvMazeClient;
     private final UserShowRepository userShowRepository;
+    private final ShowReleaseStateRepository showReleaseStateRepository;
 
-    public TrackingService(AuthService authService, TmdbClient tmdbClient, ShowRepository showRepo, TvMazeClient tvMazeClient, UserRepository userRepository, UserShowRepository userShowRepository) {
+    public TrackingService(AuthService authService, TmdbClient tmdbClient, ShowRepository showRepo, TvMazeClient tvMazeClient, UserShowRepository userShowRepository, ShowReleaseStateRepository showReleaseStateRepository) {
         this.authService = authService;
         this.tmdbClient = tmdbClient;
         this.showRepo = showRepo;
         this.tvMazeClient = tvMazeClient;
         this.userShowRepository = userShowRepository;
+        this.showReleaseStateRepository = showReleaseStateRepository;
     }
 
-    @Transactional
     public ResponseEntity<ResponseDTO> createNew(TrackShowRequest trackShowRequest) {
         ResponseDTO responseDto = createDefaultResponseDTO();
         try{
@@ -64,11 +65,34 @@ public class TrackingService {
             userShowRepository.save(userShow);
             return buildResponse(responseDto);
         } catch (Exception e) {
-            e.printStackTrace();
             responseDto.setMessage(e.getMessage());
             responseDto.setStatus(false);
             return buildResponse(responseDto);
         }
+    }
+
+    private void createBaseLine(TvMazeShowDto tvMazeShowDto, Show show) {
+        ShowReleaseState showReleaseState = new ShowReleaseState();
+        showReleaseState.setShowId(show.getShowId());
+        EpisodeDetails previousEpisode = tvMazeClient.getDataFromTvMazeApi(trimBaseUrl(tvMazeShowDto.getLinks().getPreviousepisode().getHref()), new HashMap<>(), EpisodeDetails.class);
+        EpisodeDetails nextEpisode = null;
+        if(tvMazeShowDto.getLinks().getNextepisode() != null){
+            nextEpisode = tvMazeClient.getDataFromTvMazeApi(trimBaseUrl(tvMazeShowDto.getLinks().getNextepisode().getHref()), new HashMap<>(), EpisodeDetails.class);
+        }
+        showReleaseState.setLastEpisodeNumber(previousEpisode.getNumber());
+        showReleaseState.setLastSeasonNumber(previousEpisode.getSeason());
+        if(nextEpisode != null){
+            showReleaseState.setNextSeasonNumber(nextEpisode.getSeason());
+            showReleaseState.setNextEpisodeNumber(nextEpisode.getNumber());
+            if(nextEpisode.getNumber() == 1){
+                showReleaseState.setNextSeasonAirDate(LocalDate.parse(nextEpisode.getAirdate()));
+            }
+            showReleaseState.setNextEpisodeAirDate(Instant.parse(nextEpisode.getAirstamp()));
+        }
+        showReleaseState.setLastNotifiedEpisodeNumber(0);
+        showReleaseState.setLastNotifiedSeasonNumber(0);
+        showReleaseState.setLastFetchedAt(Instant.now());
+        showReleaseStateRepository.save(showReleaseState);
     }
 
     private Show createNewShow(String imdbId, String tmdbId) {
@@ -81,20 +105,10 @@ public class TrackingService {
             show.setTvmazeId(tvMazeShowDto.getId());
             show.setShowName(tvMazeShowDto.getName());
             show.setStatus(tvMazeShowDto.getStatus());
-            EpisodeDetails previousEpisode = tvMazeClient.getDataFromTvMazeApi(trimBaseUrl(tvMazeShowDto.getLinks().getPreviousepisode().getHref()), new HashMap<>(), EpisodeDetails.class);
-            show.setLastSeasonNumber(previousEpisode.getSeason());
-            show.setLastEpisodeNumber(previousEpisode.getNumber());
-            show.setLastFetchedAt(Instant.now());
-            if(tvMazeShowDto.getLinks().getNextepisode() != null){
-                EpisodeDetails nextEpisode = tvMazeClient.getDataFromTvMazeApi(trimBaseUrl(tvMazeShowDto.getLinks().getNextepisode().getHref()), new HashMap<>(), EpisodeDetails.class);
-                show.setNextEpisodeNumber(nextEpisode.getNumber());
-                show.setNextSeasonNumber(nextEpisode.getSeason());
-                if(nextEpisode.getNumber() != null && nextEpisode.getNumber() == 1){
-                    show.setNextSeasonAirDate(LocalDate.parse(nextEpisode.getAirdate()));
-                }
-                show.setNextEpisodeAirDate(Instant.parse(nextEpisode.getAirstamp()));
-            }
+            show.setStartDate(LocalDate.parse(tvMazeShowDto.getPremiered()));
+            show.setEndDate(tvMazeShowDto.getEnded() != null ? LocalDate.parse(tvMazeShowDto.getEnded()) : null);
             showRepo.save(show);
+            createBaseLine(tvMazeShowDto,show);
         } catch (RuntimeException e) {
             throw new RuntimeException(e);
         }
