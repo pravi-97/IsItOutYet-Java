@@ -46,7 +46,8 @@ public class UserService {
         User user = new User();
         user.setEmail(email);
         user.setUsername(email.substring(0,email.indexOf("@")));
-        user.setUserId(UUID.randomUUID());
+        UUID uuid = authService.extractUserId();
+        user.setUserId(uuid != null ? uuid : UUID.randomUUID());
         user = userRepo.save(user);
         return user.getUserId();
     }

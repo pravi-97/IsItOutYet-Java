@@ -23,6 +23,7 @@ public class TvMazeClientConfig {
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .defaultHeader(HttpHeaders.USER_AGENT, "IsItOutYet/1.0 (contact.isitoutyet@gmail.com)")
                 .build();
     }
 }

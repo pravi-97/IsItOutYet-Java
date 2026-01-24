@@ -9,16 +9,22 @@ import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "user_shows")
-@IdClass(UserShowId.class)
 @Getter
 @Setter
 public class UserShow {
 
-    @Id
-    private java.util.UUID userId;
+    @EmbeddedId
+    private UserShowId id;
 
-    @Id
-    private java.util.UUID showId;
+    @MapsId("userId")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @MapsId("showId")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "show_id")
+    private Show show;
 
     private boolean notifyNewEpisode;
     private boolean notifyNewSeason;

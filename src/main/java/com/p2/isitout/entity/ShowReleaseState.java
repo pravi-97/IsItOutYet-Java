@@ -1,7 +1,6 @@
 package com.p2.isitout.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.Instant;
@@ -13,7 +12,14 @@ import java.util.UUID;
 public class ShowReleaseState {
 
     @Id
+    @Column(name = "show_id")
     private UUID showId;
+
+    @MapsId
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "show_id")
+    private Show show;
+
     private Integer lastSeasonNumber;
     private Integer lastEpisodeNumber;
 
@@ -27,4 +33,7 @@ public class ShowReleaseState {
     private Integer lastNotifiedEpisodeNumber;
 
     private Instant lastFetchedAt;
+    private Instant lastNotifiedAt;
+
+    private Integer currentSeasonNumber;
 }

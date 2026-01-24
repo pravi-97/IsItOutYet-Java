@@ -8,11 +8,15 @@ import com.p2.isitout.dto.ResponseDTO;
 import com.p2.isitout.dto.request.TrackShowRequest;
 import com.p2.isitout.entity.Show;
 import com.p2.isitout.entity.ShowReleaseState;
+import com.p2.isitout.entity.User;
 import com.p2.isitout.entity.UserShow;
+import com.p2.isitout.entity.id.UserShowId;
 import com.p2.isitout.repository.ShowReleaseStateRepository;
 import com.p2.isitout.repository.ShowRepository;
+import com.p2.isitout.repository.UserRepository;
 import com.p2.isitout.repository.UserShowRepository;
 import com.p2.isitout.security.AuthService;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -32,16 +36,19 @@ public class TrackingService {
     private final TvMazeClient tvMazeClient;
     private final UserShowRepository userShowRepository;
     private final ShowReleaseStateRepository showReleaseStateRepository;
+    private final UserRepository userRepository;
 
-    public TrackingService(AuthService authService, TmdbClient tmdbClient, ShowRepository showRepo, TvMazeClient tvMazeClient, UserShowRepository userShowRepository, ShowReleaseStateRepository showReleaseStateRepository) {
+    public TrackingService(AuthService authService, TmdbClient tmdbClient, ShowRepository showRepo, TvMazeClient tvMazeClient, UserShowRepository userShowRepository, ShowReleaseStateRepository showReleaseStateRepository, UserRepository userRepository) {
         this.authService = authService;
         this.tmdbClient = tmdbClient;
         this.showRepo = showRepo;
         this.tvMazeClient = tvMazeClient;
         this.userShowRepository = userShowRepository;
         this.showReleaseStateRepository = showReleaseStateRepository;
+        this.userRepository = userRepository;
     }
 
+//    @Transactional
     public ResponseEntity<ResponseDTO> createNew(TrackShowRequest trackShowRequest) {
         ResponseDTO responseDto = createDefaultResponseDTO();
         try{
@@ -59,9 +66,13 @@ public class TrackingService {
             userShow.setNotifyNewSeason(trackShowRequest.isNotifyNewSeason());
             userShow.setNotifyNewEpisode(trackShowRequest.isNotifyNewEpisode());
             userShow.setNotifySeasonConfirmed(trackShowRequest.isNotifySeasonConfirmed());
-            userShow.setUserId(authService.extractUserId());
-            userShow.setShowId(show.getShowId());
+            userShow.setUser(getUserFromEmail());
+            userShow.setShow(show);
             userShow.setAddedAt(Instant.now());
+            UserShowId userShowId = new UserShowId();
+            userShowId.setShowId(show.getShowId());
+            userShowId.setUserId(authService.extractUserId());
+            userShow.setId(userShowId);
             userShowRepository.save(userShow);
             return buildResponse(responseDto);
         } catch (Exception e) {
@@ -73,7 +84,7 @@ public class TrackingService {
 
     private void createBaseLine(TvMazeShowDto tvMazeShowDto, Show show) {
         ShowReleaseState showReleaseState = new ShowReleaseState();
-        showReleaseState.setShowId(show.getShowId());
+        showReleaseState.setShow(show);
         EpisodeDetails previousEpisode = tvMazeClient.getDataFromTvMazeApi(trimBaseUrl(tvMazeShowDto.getLinks().getPreviousepisode().getHref()), new HashMap<>(), EpisodeDetails.class);
         EpisodeDetails nextEpisode = null;
         if(tvMazeShowDto.getLinks().getNextepisode() != null){
@@ -92,6 +103,7 @@ public class TrackingService {
         showReleaseState.setLastNotifiedEpisodeNumber(0);
         showReleaseState.setLastNotifiedSeasonNumber(0);
         showReleaseState.setLastFetchedAt(Instant.now());
+        showReleaseState.setLastNotifiedAt(null);
         showReleaseStateRepository.save(showReleaseState);
     }
 
@@ -136,5 +148,14 @@ public class TrackingService {
         responseDto.setStatusCode(200);
         responseDto.setStatus(true);
         return responseDto;
+    }
+
+    private User getUserFromEmail() {
+        String email = authService.extractEmail();
+        if(email != null && !email.isEmpty()){
+            return userRepository.findByEmail(email);
+        }else {
+            throw new RuntimeException("Email ID not found in Database!");
+        }
     }
 }

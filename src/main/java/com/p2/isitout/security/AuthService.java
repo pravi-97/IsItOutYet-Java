@@ -6,14 +6,9 @@ import com.google.firebase.auth.FirebaseToken;
 import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class AuthService {
@@ -32,8 +27,11 @@ public class AuthService {
         return userId != null ? UUID.fromString(userId) : null;
     }
 
+    @SuppressWarnings("unchecked")
     public List<String> extractRoles() {
-        return (List<String>) getTokenFromContext().getClaims().get("roles");
+        return (List<String>) getTokenFromContext()
+                .getClaims()
+                .getOrDefault("roles", List.of());
     }
 
     public String extractEmail() {

@@ -1,15 +1,214 @@
 package com.p2.isitout.service;
 
+import com.p2.isitout.client.tvmaze.TvMazeClient;
+import com.p2.isitout.client.tvmaze.dto.EpisodeDetails;
+import com.p2.isitout.client.tvmaze.dto.TvMazeShowDto;
+import com.p2.isitout.entity.NotificationLog;
+import com.p2.isitout.entity.ShowReleaseState;
+import com.p2.isitout.entity.UserShow;
+import com.p2.isitout.repository.NotificationLogRepository;
+import com.p2.isitout.repository.ShowReleaseStateRepository;
+import com.p2.isitout.repository.UserShowRepository;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 public class ShowReleaseDetectionService {
+    private final TvMazeClient tvMazeClient;
+    private final ShowReleaseStateRepository showReleaseStateRepository;
+    private final UserShowRepository userShowRepository;
+    private final NotificationLogRepository notificationLogRepository;
+
+    public ShowReleaseDetectionService(TvMazeClient tvMazeClient, ShowReleaseStateRepository showReleaseStateRepository, UserShowRepository userShowRepository, NotificationLogRepository notificationLogRepository) {
+        this.tvMazeClient = tvMazeClient;
+        this.showReleaseStateRepository = showReleaseStateRepository;
+        this.userShowRepository = userShowRepository;
+        this.notificationLogRepository = notificationLogRepository;
+    }
 
     public void detectAndProcessNewReleases() {
-        // fetch from TVMaze
-        // compare with DB
-        // identify new episodes/seasons
-        // persist new data
-        // emit domain events / call notifier
+        Instant start = Instant.now();
+        Map<UUID, TvMazeShowDto> tvMazeMap = new HashMap<>();
+        List<ShowReleaseState> showReleaseStates = showReleaseStateRepository.findAllByShow_Status("Running");
+        showReleaseStates.forEach(shows -> {
+            TvMazeShowDto tvMazeShowDto = tvMazeClient.getShowByImdbId(shows.getShow().getImdbId());
+            tvMazeMap.put(shows.getShowId(), tvMazeShowDto);
+        });
+        compareAndUpdate(tvMazeMap, showReleaseStates);
+        log.info("Polling {} shows took {} ms", showReleaseStates.size(), Duration.between(start, Instant.now()).toMillis());
+    }
+
+    private void compareAndUpdate(Map<UUID, TvMazeShowDto> tvMazeMap, List<ShowReleaseState> dbStates) {
+        for (ShowReleaseState state : dbStates) {
+            TvMazeShowDto apiData = tvMazeMap.get(state.getShowId());
+
+            // 1. Safety Check
+            if (apiData == null || apiData.getLinks() == null)
+                continue;
+
+            String apiStatus = apiData.getStatus();
+            String dbStatus  = state.getShow().getStatus();
+
+            // Normalize nulls
+            dbStatus = dbStatus == null ? "Running" : dbStatus;
+
+            // ===============================
+            // ENDED DETECTION
+            // ===============================
+            if ("Running".equalsIgnoreCase(dbStatus) && isEndedStatus(apiStatus)) {
+                handleShowEnded(state);
+
+                state.getShow().setStatus(apiStatus);
+                state.setLastFetchedAt(Instant.now());
+                showReleaseStateRepository.save(state);
+
+                continue; // 🚨 stop episode/season logic
+            }
+
+            // ===============================
+            // CANCELLED DETECTION
+            // ===============================
+            if ("Running".equalsIgnoreCase(dbStatus) && isCancelledStatus(apiStatus)) {
+                handleShowCancelled(state);
+
+                state.getShow().setStatus(apiStatus);
+                state.setLastFetchedAt(Instant.now());
+                showReleaseStateRepository.save(state);
+
+                continue; // 🚨 stop episode/season logic
+            }
+
+            TvMazeShowDto.NextEpisode nextEpApi = apiData.getLinks().getNextepisode();
+
+            // 2. Scenario: API says "No Next Episode" (Show Ended or Waiting)
+            if (nextEpApi == null) {
+                if (state.getNextEpisodeNumber() != null) {
+                    // Clear "Next" fields so we don't send false reminders
+                    state.setNextSeasonNumber(null);
+                    state.setNextEpisodeNumber(null);
+                    state.setNextEpisodeAirDate(null);
+                    state.setNextSeasonAirDate(null);
+                    state.setLastFetchedAt(Instant.now());
+                    showReleaseStateRepository.save(state);
+                }
+                continue;
+            }
+
+            // 3. Scenario: API has Next Episode -> Fetch Details
+            EpisodeDetails epDetails = tvMazeClient.getDataFromTvMazeApi(nextEpApi.getHref(), new HashMap<>(), EpisodeDetails.class);
+
+            // --- CORE NOTIFICATION LOGIC ---
+            Integer apiSeason = epDetails.getSeason();
+            Integer apiEpisode = epDetails.getNumber();
+            Instant episodeAirInstant = epDetails.getAirstamp() != null ? Instant.parse(epDetails.getAirstamp()) : null;
+
+            // First sync → initialize, no notification
+            if (state.getLastNotifiedSeasonNumber() == null) {
+                state.setLastNotifiedSeasonNumber(apiSeason);
+                state.setCurrentSeasonNumber(apiSeason);
+            }
+
+            // EARLY SEASON ANNOUNCEMENT (opt-in)
+            if (apiSeason != null && state.getCurrentSeasonNumber() != null && apiSeason > state.getCurrentSeasonNumber()) {
+                handleSeasonAnnouncedEarly(state, epDetails);
+            }
+            // Always track current season
+            state.setCurrentSeasonNumber(apiSeason);
+            // SEASON STARTED (episode 1 has aired)
+            if (apiSeason != null && apiEpisode != null && apiEpisode == 1 && apiSeason > state.getLastNotifiedSeasonNumber() && episodeAirInstant != null && !episodeAirInstant.isAfter(Instant.now())) {
+                handleNewSeasonAnnouncement(state, epDetails);
+                state.setLastNotifiedSeasonNumber(apiSeason);
+            }
+
+            // 4. Update "Next" Fields (Used by your Scheduler for "6 hours before" emails)
+            state.setNextSeasonNumber(apiSeason);
+            state.setNextEpisodeNumber(epDetails.getNumber());
+
+            // Parse Timestamps
+            if (epDetails.getAirstamp() != null) {
+                state.setNextEpisodeAirDate(Instant.parse(epDetails.getAirstamp()));
+            }
+            state.setLastFetchedAt(Instant.now());
+            showReleaseStateRepository.save(state);
+        }
+    }
+
+    private void handleNewSeasonAnnouncement(ShowReleaseState state, EpisodeDetails epDetails) {
+        //TODO: filter based on who wants to receive the notification
+        // 1. Find users tracking this show with "Notify New Season" enabled
+        List<UserShow> followers = userShowRepository.findByShow_ShowIdAndNotifyNewSeasonTrue(state.getShowId());
+
+        followers.forEach(userShow -> {
+            // 2. Generate Idempotency Key (Safety Net)
+            // Format: SEASON_ANNOUNCED:<ShowID>:<SeasonNumber>:<UserID>
+            String idempotencyKey = String.format("SEASON_STARTED:%s:%d:%s", state.getShowId(), epDetails.getSeason(), userShow.getUser().getUserId());
+
+            // 3. Queue Notification
+            notificationLogRepository.createLogIfNotExists(userShow.getUser().getUserId(), state.getShowId(), NotificationLog.NotificationType.SEASON_STARTED, epDetails.getSeason(), epDetails.getNumber(), idempotencyKey);
+        });
+    }
+
+    private void handleSeasonAnnouncedEarly(ShowReleaseState state, EpisodeDetails epDetails) {
+        //TODO: filter based on who wants to receive the notification
+        List<UserShow> followers = userShowRepository.findByShow_ShowId(state.getShowId());
+
+        followers.forEach(userShow -> {
+            String key = String.format("SEASON_ANNOUNCED:%s:%d:%s", state.getShowId(), epDetails.getSeason(), userShow.getUser().getUserId());
+
+            notificationLogRepository.createLogIfNotExists(userShow.getUser().getUserId(), state.getShowId(), NotificationLog.NotificationType.SEASON_ANNOUNCED, epDetails.getSeason(), null, key);
+        });
+    }
+
+    private boolean isCancelledStatus(String status) {
+        return status != null &&
+                (status.equalsIgnoreCase("Canceled") ||
+                        status.equalsIgnoreCase("Cancelled"));
+    }
+
+    private boolean isEndedStatus(String status) {
+        return status != null &&
+                status.equalsIgnoreCase("Ended");
+    }
+    private void handleShowEnded(ShowReleaseState state) {
+
+        List<UserShow> followers = userShowRepository.findByShow_ShowId(state.getShowId());
+
+        for (UserShow userShow : followers) {
+            String key = String.format("SHOW_ENDED:%s:%s", state.getShowId(), userShow.getUser().getUserId()
+            );
+
+            notificationLogRepository.createLogIfNotExists(
+                    userShow.getUser().getUserId(),
+                    state.getShowId(),
+                    NotificationLog.NotificationType.SHOW_ENDED,
+                    null,
+                    null,
+                    key
+            );
+        }
+
+        log.info("Show {} ended normally. Notifications queued: {}", state.getShowId(), followers.size());
+    }
+    private void handleShowCancelled(ShowReleaseState state) {
+        List<UserShow> followers = userShowRepository.findByShow_ShowId(state.getShowId());
+        for (UserShow userShow : followers) {
+
+            String key = String.format("SHOW_CANCELLED:%s:%s", state.getShowId(), userShow.getUser().getUserId());
+
+            notificationLogRepository.createLogIfNotExists(
+                    userShow.getUser().getUserId(),
+                    state.getShowId(),
+                    NotificationLog.NotificationType.SHOW_CANCELLED,
+                    null,
+                    null,
+                    key
+            );
+        }
+
+        log.info("Show {} was cancelled. Notifications queued: {}", state.getShowId(), followers.size());
     }
 }

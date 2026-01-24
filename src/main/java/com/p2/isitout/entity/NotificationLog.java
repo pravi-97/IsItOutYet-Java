@@ -10,14 +10,14 @@ import java.util.UUID;
 
 @Entity
 
-@Table(name = "notification_log",uniqueConstraints = @UniqueConstraint(columnNames = "idempotency_key")
-)
+@Table(name = "notification_log",uniqueConstraints = @UniqueConstraint(columnNames = "idempotency_key"))
 @Getter
 @Setter
 public class NotificationLog {
 
     @Id
     private UUID notificationId;
+
 
     private UUID userId;
     private UUID showId;
@@ -42,12 +42,17 @@ public class NotificationLog {
     private String lastError;
 
     @Column(name = "idempotency_key", nullable = false)
-    private String idempotencyKey; //EPISODE_RELEASE:<showId>:<season>:<episode>:<userId>, SEASON_CONFIRMED:<showId>:<season>:<userId>
+    private String idempotencyKey; //NotificationType:<showId>:<season>:<episode>:<userId>,
 
     public enum NotificationType {
         EPISODE_RELEASE,
-        SEASON_CONFIRMED,
-        DATE_CHANGED
+        DATE_CHANGED,
+        REMINDER_TODAY,
+        REMINDER_TOMORROW,
+        SEASON_ANNOUNCED,
+        SEASON_STARTED,
+        SHOW_CANCELLED,
+        SHOW_ENDED
     }
 
     public enum NotificationStatus {
