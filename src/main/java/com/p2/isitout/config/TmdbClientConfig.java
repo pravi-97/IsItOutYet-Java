@@ -13,7 +13,7 @@ public class TmdbClientConfig {
 
     @Bean
     @Qualifier("tmdbWebClient")
-    public WebClient tmdbWebClient( @Value("${tmdb.base-url}") String baseUrl, @Value("${tmdb.token}") String token) {
+    public WebClient tmdbWebClient(@Value("${tmdb.base-url}") String baseUrl, @Value("${tmdb.token}") String token) {
         return WebClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)

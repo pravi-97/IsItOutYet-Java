@@ -10,7 +10,9 @@ import java.util.UUID;
 
 @Entity
 
-@Table(name = "notification_log",uniqueConstraints = @UniqueConstraint(columnNames = "idempotency_key"))
+@Table(name = "notification_log",
+        uniqueConstraints = @UniqueConstraint(columnNames = "idempotency_key"),
+        indexes = {@Index(name = "idx_notification_status", columnList = "status")})
 @Getter
 @Setter
 public class NotificationLog {
@@ -18,22 +20,29 @@ public class NotificationLog {
     @Id
     private UUID notificationId;
 
-
+    @Column(nullable = false)
     private UUID userId;
+    @Column(nullable = false)
     private UUID showId;
 
+    @Column(nullable = false)
     private Integer seasonNumber;
+    @Column(nullable = false)
     private Integer episodeNumber;
 
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private NotificationType notificationType;
 
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private NotificationStatus status;
 
     private int retryCount;
 
+    @Column(nullable = false)
     private Instant triggeredAt;
+
     private Instant lastAttemptAt;
     private Instant sentAt;
     private Instant failedAt;
@@ -43,17 +52,6 @@ public class NotificationLog {
 
     @Column(name = "idempotency_key", nullable = false)
     private String idempotencyKey; //NotificationType:<showId>:<season>:<episode>:<userId>,
-
-    public enum NotificationType {
-        EPISODE_RELEASE,
-        DATE_CHANGED,
-        REMINDER_TODAY,
-        REMINDER_TOMORROW,
-        SEASON_ANNOUNCED,
-        SEASON_STARTED,
-        SHOW_CANCELLED,
-        SHOW_ENDED
-    }
 
     public enum NotificationStatus {
         PENDING,

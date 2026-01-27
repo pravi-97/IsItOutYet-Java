@@ -4,11 +4,14 @@ import com.p2.isitout.client.tvmaze.TvMazeClient;
 import com.p2.isitout.client.tvmaze.dto.EpisodeDetails;
 import com.p2.isitout.client.tvmaze.dto.TvMazeShowDto;
 import com.p2.isitout.entity.NotificationLog;
+import com.p2.isitout.entity.NotificationType;
 import com.p2.isitout.entity.ShowReleaseState;
 import com.p2.isitout.entity.UserShow;
 import com.p2.isitout.repository.NotificationLogRepository;
 import com.p2.isitout.repository.ShowReleaseStateRepository;
 import com.p2.isitout.repository.UserShowRepository;
+
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -52,13 +55,9 @@ public class ShowReleaseDetectionService {
 
             String apiStatus = apiData.getStatus();
             String dbStatus  = state.getShow().getStatus();
-
-            // Normalize nulls
             dbStatus = dbStatus == null ? "Running" : dbStatus;
 
-            // ===============================
             // ENDED DETECTION
-            // ===============================
             if ("Running".equalsIgnoreCase(dbStatus) && isEndedStatus(apiStatus)) {
                 handleShowEnded(state);
 
@@ -69,9 +68,7 @@ public class ShowReleaseDetectionService {
                 continue; // 🚨 stop episode/season logic
             }
 
-            // ===============================
             // CANCELLED DETECTION
-            // ===============================
             if ("Running".equalsIgnoreCase(dbStatus) && isCancelledStatus(apiStatus)) {
                 handleShowCancelled(state);
 
@@ -99,7 +96,7 @@ public class ShowReleaseDetectionService {
             }
 
             // 3. Scenario: API has Next Episode -> Fetch Details
-            EpisodeDetails epDetails = tvMazeClient.getDataFromTvMazeApi(nextEpApi.getHref(), new HashMap<>(), EpisodeDetails.class);
+            EpisodeDetails epDetails = tvMazeClient.getDataFromTvMazeApi(trimBaseUrl(nextEpApi.getHref()), new HashMap<>(), EpisodeDetails.class);
 
             // --- CORE NOTIFICATION LOGIC ---
             Integer apiSeason = epDetails.getSeason();
@@ -112,7 +109,7 @@ public class ShowReleaseDetectionService {
                 state.setCurrentSeasonNumber(apiSeason);
             }
 
-            // EARLY SEASON ANNOUNCEMENT (opt-in)
+            // EARLY SEASON ANNOUNCEMENT
             if (apiSeason != null && state.getCurrentSeasonNumber() != null && apiSeason > state.getCurrentSeasonNumber()) {
                 handleSeasonAnnouncedEarly(state, epDetails);
             }
@@ -148,8 +145,21 @@ public class ShowReleaseDetectionService {
             String idempotencyKey = String.format("SEASON_STARTED:%s:%d:%s", state.getShowId(), epDetails.getSeason(), userShow.getUser().getUserId());
 
             // 3. Queue Notification
-            notificationLogRepository.createLogIfNotExists(userShow.getUser().getUserId(), state.getShowId(), NotificationLog.NotificationType.SEASON_STARTED, epDetails.getSeason(), epDetails.getNumber(), idempotencyKey);
+            createLogIfNotExists(userShow.getUser().getUserId(), state.getShowId(), NotificationType.SEASON_STARTED, epDetails.getSeason(), epDetails.getNumber(), idempotencyKey);
         });
+    }
+
+    private void createLogIfNotExists(UUID userId, UUID showId, NotificationType notificationType, Integer season, Integer number, String idempotencyKey) {
+        NotificationLog notificationLog = new NotificationLog();
+        notificationLog.setNotificationId(UUID.randomUUID());
+        notificationLog.setUserId(userId);
+        notificationLog.setShowId(showId);
+        notificationLog.setStatus(NotificationLog.NotificationStatus.PENDING);
+        notificationLog.setNotificationType(notificationType);
+        notificationLog.setSeasonNumber(season);
+        notificationLog.setEpisodeNumber(number);
+        notificationLog.setIdempotencyKey(idempotencyKey);
+        notificationLogRepository.save(notificationLog);
     }
 
     private void handleSeasonAnnouncedEarly(ShowReleaseState state, EpisodeDetails epDetails) {
@@ -159,7 +169,7 @@ public class ShowReleaseDetectionService {
         followers.forEach(userShow -> {
             String key = String.format("SEASON_ANNOUNCED:%s:%d:%s", state.getShowId(), epDetails.getSeason(), userShow.getUser().getUserId());
 
-            notificationLogRepository.createLogIfNotExists(userShow.getUser().getUserId(), state.getShowId(), NotificationLog.NotificationType.SEASON_ANNOUNCED, epDetails.getSeason(), null, key);
+            createLogIfNotExists(userShow.getUser().getUserId(), state.getShowId(), NotificationType.SEASON_ANNOUNCED, epDetails.getSeason(), null, key);
         });
     }
 
@@ -181,10 +191,10 @@ public class ShowReleaseDetectionService {
             String key = String.format("SHOW_ENDED:%s:%s", state.getShowId(), userShow.getUser().getUserId()
             );
 
-            notificationLogRepository.createLogIfNotExists(
+            createLogIfNotExists(
                     userShow.getUser().getUserId(),
                     state.getShowId(),
-                    NotificationLog.NotificationType.SHOW_ENDED,
+                    NotificationType.SHOW_ENDED,
                     null,
                     null,
                     key
@@ -199,10 +209,10 @@ public class ShowReleaseDetectionService {
 
             String key = String.format("SHOW_CANCELLED:%s:%s", state.getShowId(), userShow.getUser().getUserId());
 
-            notificationLogRepository.createLogIfNotExists(
+            createLogIfNotExists(
                     userShow.getUser().getUserId(),
                     state.getShowId(),
-                    NotificationLog.NotificationType.SHOW_CANCELLED,
+                    NotificationType.SHOW_CANCELLED,
                     null,
                     null,
                     key
@@ -210,5 +220,10 @@ public class ShowReleaseDetectionService {
         }
 
         log.info("Show {} was cancelled. Notifications queued: {}", state.getShowId(), followers.size());
+    }
+
+    public static String trimBaseUrl(String url) {
+        URI uri = URI.create(url);
+        return uri.getPath();
     }
 }

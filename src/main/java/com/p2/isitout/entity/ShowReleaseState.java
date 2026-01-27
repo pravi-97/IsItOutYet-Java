@@ -20,6 +20,8 @@ public class ShowReleaseState {
     @JoinColumn(name = "show_id")
     private Show show;
 
+    private String showName;
+
     private Integer lastSeasonNumber;
     private Integer lastEpisodeNumber;
 
@@ -36,4 +38,7 @@ public class ShowReleaseState {
     private Instant lastNotifiedAt;
 
     private Integer currentSeasonNumber;
+
+    private Boolean nextEpisodeReminderQueued;
+
 }

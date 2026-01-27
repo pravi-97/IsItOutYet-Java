@@ -18,6 +18,7 @@ public class User {
 
     private String username;
     private String email;
+    private String name;
 
     @CreationTimestamp
     private Instant createdAt;

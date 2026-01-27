@@ -48,4 +48,8 @@ public class AuthService {
 
         FirebaseAuth.getInstance().setCustomUserClaims(extractFirebaseUid(), claims);
     }
+
+    public String extractUserName() {
+        return getTokenFromContext().getName();
+    }
 }

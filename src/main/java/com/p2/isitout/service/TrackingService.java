@@ -103,6 +103,7 @@ public class TrackingService {
         showReleaseState.setLastNotifiedEpisodeNumber(0);
         showReleaseState.setLastNotifiedSeasonNumber(0);
         showReleaseState.setLastFetchedAt(Instant.now());
+        showReleaseState.setShowName(show.getShowName());
         showReleaseState.setLastNotifiedAt(null);
         showReleaseStateRepository.save(showReleaseState);
     }
