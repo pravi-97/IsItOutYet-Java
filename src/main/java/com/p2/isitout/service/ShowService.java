@@ -2,6 +2,7 @@ package com.p2.isitout.service;
 
 import com.p2.isitout.client.tmdb.TmdbClient;
 import com.p2.isitout.client.tmdb.dto.TmdbSearchResponse;
+import com.p2.isitout.client.tmdb.dto.TmdbTvShowDetailsDto;
 import com.p2.isitout.dto.ResponseDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,8 @@ public class ShowService {
             return buildResponse(responseDto);
         }catch(Exception e){
             e.printStackTrace();
+            responseDto.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            responseDto.setMessage(e.getMessage());
             return buildResponse(responseDto);
         }
     }
@@ -45,5 +48,35 @@ public class ShowService {
         return ResponseEntity
                 .status(status)
                 .body(responseDto);
+    }
+
+    public ResponseEntity<ResponseDTO> getTrendingTvShows(int page) {
+        ResponseDTO responseDto = createDefaultResponseDTO();
+        try{
+            TmdbSearchResponse resp = tmdbClient.trendingTvShows(page);
+            responseDto.setData(resp);
+            responseDto.setMessage("Success!");
+            return buildResponse(responseDto);
+        }catch(Exception e){
+            e.printStackTrace();
+            responseDto.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            responseDto.setMessage(e.getMessage());
+            return buildResponse(responseDto);
+        }
+    }
+
+    public ResponseEntity<ResponseDTO> getShowById(String showId) {
+        ResponseDTO responseDto = createDefaultResponseDTO();
+        try{
+            TmdbTvShowDetailsDto resp = tmdbClient.getTvShowById(showId);
+            responseDto.setData(resp);
+            responseDto.setMessage("Success!");
+            return buildResponse(responseDto);
+        }catch(Exception e){
+            e.printStackTrace();
+            responseDto.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            responseDto.setMessage(e.getMessage());
+            return buildResponse(responseDto);
+        }
     }
 }

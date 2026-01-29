@@ -3,10 +3,7 @@ package com.p2.isitout.controller;
 import com.p2.isitout.dto.ResponseDTO;
 import com.p2.isitout.service.ShowService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/shows")
@@ -23,4 +20,13 @@ public class ShowSearchController {
         return showService.searchTvShows(name, page);
     }
 
+    @GetMapping("/trending")
+    public ResponseEntity<ResponseDTO> trendingTvShows(@RequestParam int page){
+        return showService.getTrendingTvShows(page);
+    }
+
+    @GetMapping("/{showId}")
+    public ResponseEntity<ResponseDTO> getShowById(@PathVariable String showId){
+        return showService.getShowById(showId);
+    }
 }

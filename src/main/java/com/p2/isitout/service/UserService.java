@@ -1,9 +1,17 @@
 package com.p2.isitout.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.p2.isitout.client.tmdb.TmdbClient;
+import com.p2.isitout.client.tmdb.dto.TmdbTvShowDetailsDto;
+import com.p2.isitout.client.tmdb.dto.TmdbTvShowDto;
 import com.p2.isitout.dto.ResponseDTO;
+import com.p2.isitout.dto.UserDto;
+import com.p2.isitout.dto.response.MyDetailsDto;
 import com.p2.isitout.entity.User;
 import com.p2.isitout.repository.UserRepository;
+import com.p2.isitout.repository.UserShowRepository;
 import com.p2.isitout.security.AuthService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -13,25 +21,30 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepo;
     private final AuthService authService;
-    public UserService(UserRepository userRepo, AuthService authService) {
-        this.userRepo = userRepo;
-        this.authService = authService;
-    }
+    private final ObjectMapper objectMapper;
+    private final UserShowRepository userShowRepository;
+    private final TmdbClient tmdbClient;
 
     public ResponseEntity<ResponseDTO> getUserDetails() {
         ResponseDTO responseDto =  createDefaultResponseDTO();
+        MyDetailsDto myDetails = new MyDetailsDto();
+        UUID uuid = null;
         try{
             final String email = authService.extractEmail();
-            boolean userExist = userRepo.existsByEmail(email);
-            if(!userExist){
+            User user = userRepo.findByEmail(email);
+            if(user == null){
                 List<String> roles = new ArrayList<>(List.of("USER"));
-                UUID uuid = createNewUser(email);
+                uuid = createNewUser(email);
                 authService.setCustomClaims(uuid,roles);
             }
+            myDetails.setUserDto(userToDto(user));
+            myDetails.setShowDetails(getTrackedShowsByUserId(user == null ? uuid : user.getUserId()));
+            responseDto.setData(myDetails);
             return buildResponse(responseDto);
         }
         catch(Exception e){
@@ -40,6 +53,28 @@ public class UserService {
             responseDto.setStatusCode(500);
             return buildResponse(responseDto);
         }
+    }
+
+    private List<TmdbTvShowDetailsDto> getTrackedShowsByUserId(UUID userId) {
+        List<TmdbTvShowDetailsDto> trackedShows = new ArrayList<>();
+        List<String> showIds = userShowRepository.findShowsByUserIds(userId);
+        for (String showId : showIds) {
+            TmdbTvShowDetailsDto tmdbTvShow = tmdbClient.getTvShowById(showId);
+            trackedShows.add(tmdbTvShow);
+        }
+        return trackedShows;
+    }
+
+
+    public UserDto userToDto(User user) {
+        UserDto userDto = new UserDto();
+        try{
+            userDto = objectMapper.convertValue(user, UserDto.class);
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
+        return userDto;
     }
 
     private UUID createNewUser(String email) {
