@@ -1,0 +1,39 @@
+name: Deploy to SAP BTP CF
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Build
+        run: mvn clean package -DskipTests
+
+      - name: Install Cloud Foundry CLI
+        run: |
+          curl -fsSL https://packages.cloudfoundry.org/stable?release=linux64-binary | tar -zx
+          sudo mv cf /usr/local/bin/cf
+
+      - name: CF Login
+        run: |
+          cf login \
+            -a ${{ secrets.CF_API }} \
+            -u ${{ secrets.CF_USERNAME }} \
+            -p ${{ secrets.CF_PASSWORD }} \
+            -o ${{ secrets.CF_ORG }} \
+            -s ${{ secrets.CF_SPACE }}
+
+      - name: Deploy
+        run: cf push

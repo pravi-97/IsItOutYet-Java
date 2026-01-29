@@ -5,3 +5,4 @@ applications:
     path: target/isitout-0.0.1-SNAPSHOT.jar
     env:
       JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 21.+ } }'
+      SPRING_PROFILES_ACTIVE: prod
