@@ -21,20 +21,12 @@ jobs:
       - name: Build
         run: mvn clean package -DskipTests
 
-      - name: Install Cloud Foundry CLI
+      - name: Install Cloud Foundry CLI v8
         run: |
-          curl -L "https://packages.cloudfoundry.org/stable?release=linux64-binary&source=github-action" -o cf-cli.tgz
-          mkdir cf-cli
-          tar -xzf cf-cli.tgz -C cf-cli
-          BINARY=$(find cf-cli -type f -name cf -perm -111 | head -n1)
-          if [ -z "$BINARY" ]; then
-            echo "cf binary not found in extracted archive"
-            ls -la cf-cli
-            exit 1
-          fi
-          sudo mv "$BINARY" /usr/local/bin/cf
+          curl -fsSL https://packages.cloudfoundry.org/stable?release=linux64-binary | tar -zx
+          sudo mv cf8 /usr/local/bin/cf
           sudo chmod +x /usr/local/bin/cf
-          cf --version
+          cf version
 
       - name: CF Login
         run: |
