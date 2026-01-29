@@ -10,14 +10,6 @@ jobs:
     environment: dev
 
     steps:
-      - name: Debug secrets presence
-        run: |
-          echo "CF_API set? -> ${CF_API:+YES}"
-          echo "CF_ORG set? -> ${CF_ORG:+YES}"
-        env:
-          CF_API: ${{ secrets.CF_API }}
-          CF_ORG: ${{ secrets.CF_ORG }}
-          
       - name: Checkout
         uses: actions/checkout@v4
 
