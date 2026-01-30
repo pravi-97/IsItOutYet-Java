@@ -135,8 +135,6 @@ public class ShowReleaseDetectionService {
     }
 
     private void handleNewSeasonAnnouncement(ShowReleaseState state, EpisodeDetails epDetails) {
-        //TODO: filter based on who wants to receive the notification
-        // 1. Find users tracking this show with "Notify New Season" enabled
         List<UserShow> followers = userShowRepository.findByShow_ShowIdAndNotifyNewSeasonTrue(state.getShowId());
 
         followers.forEach(userShow -> {
@@ -163,8 +161,7 @@ public class ShowReleaseDetectionService {
     }
 
     private void handleSeasonAnnouncedEarly(ShowReleaseState state, EpisodeDetails epDetails) {
-        //TODO: filter based on who wants to receive the notification
-        List<UserShow> followers = userShowRepository.findByShow_ShowId(state.getShowId());
+        List<UserShow> followers = userShowRepository.findByShow_ShowIdAndNotifySeasonConfirmedTrue(state.getShowId());
 
         followers.forEach(userShow -> {
             String key = String.format("SEASON_ANNOUNCED:%s:%d:%s", state.getShowId(), epDetails.getSeason(), userShow.getUser().getUserId());

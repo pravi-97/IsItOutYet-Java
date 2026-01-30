@@ -16,7 +16,6 @@ import com.p2.isitout.repository.ShowRepository;
 import com.p2.isitout.repository.UserRepository;
 import com.p2.isitout.repository.UserShowRepository;
 import com.p2.isitout.security.AuthService;
-import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -74,8 +73,10 @@ public class TrackingService {
             userShowId.setUserId(authService.extractUserId());
             userShow.setId(userShowId);
             userShowRepository.save(userShow);
+            //TODO: sendEmail
             return buildResponse(responseDto);
         } catch (Exception e) {
+            responseDto.setStatusCode(500);
             responseDto.setMessage(e.getMessage());
             responseDto.setStatus(false);
             return buildResponse(responseDto);

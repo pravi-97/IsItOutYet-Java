@@ -15,6 +15,9 @@ public class UserShowDto {
     private UUID showId;
 
     private boolean notifyNewEpisode;
+    private boolean notifyEpisodeDayBefore;
+    private boolean notifyEpisodeOnReleaseDay;
+    private boolean notifyEpisodeAfterRelease;
     private boolean notifyNewSeason;
     private boolean notifySeasonConfirmed;
 

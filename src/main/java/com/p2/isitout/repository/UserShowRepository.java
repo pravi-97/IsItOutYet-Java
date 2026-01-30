@@ -19,4 +19,6 @@ public interface UserShowRepository extends JpaRepository<UserShow, UserShowId> 
 
     @Query(value = "select tmdb_id from shows s join user_shows us on s.show_id = us.show_id where us.user_id = :userId", nativeQuery = true)
     List<String> findShowsByUserIds(UUID userId);
+
+    List<UserShow> findByShow_ShowIdAndNotifySeasonConfirmedTrue(UUID showId);
 }

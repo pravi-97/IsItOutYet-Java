@@ -11,8 +11,11 @@ public class TrackShowRequest {
     private String tvmazeId;
 
     private boolean notifyNewEpisode;
-    private boolean notifyNewSeason;
+    private boolean notifyEpisodeDayBefore;
+    private boolean notifyEpisodeOnReleaseDay;
+    private boolean notifyEpisodeAfterRelease;
     private boolean notifySeasonConfirmed;
+    private boolean notifyNewSeason;
 
     private boolean tracking = true;
 }
