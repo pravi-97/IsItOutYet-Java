@@ -27,6 +27,9 @@ public class UserShow {
     private Show show;
 
     private boolean notifyNewEpisode;
+    private boolean notifyEpisodeDayBefore;
+    private boolean notifyEpisodeOnReleaseDay;
+    private boolean notifyEpisodeAfterRelease;
     private boolean notifyNewSeason;
     private boolean notifySeasonConfirmed;
 

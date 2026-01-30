@@ -38,7 +38,7 @@ public class NotificationLog {
     @Enumerated(EnumType.STRING)
     private NotificationStatus status;
 
-    private int retryCount;
+    private Integer retryCount;
 
     @Column(nullable = false)
     private Instant triggeredAt;

@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -23,8 +24,10 @@ public class EmailNotificationSenderService {
     private final ShowReleaseStateRepository showReleaseStateRepository;
     @Value("${notification.max.retries}")
     private Integer maxRetries;
+
     @Value("${zeptomail.from.address}")
     private String fromAddress;
+
     @Value("${zeptomail.from.name}")
     private String fromName;
 
@@ -33,7 +36,7 @@ public class EmailNotificationSenderService {
     private final EmailTemplateRepository emailTemplateRepository;
     private final UserRepository userRepository;
 
-    public void sendPending() {
+    public void sendEmails(NotificationLog.NotificationStatus notificationStatus) {
         EnumMap<NotificationType, EmailTemplate> emailTemplateMap = emailTemplateRepository.findAll()
                 .stream()
                 .collect(Collectors.toMap(
@@ -42,7 +45,13 @@ public class EmailNotificationSenderService {
                         (a, b) -> b,
                         () -> new EnumMap<>(NotificationType.class)
                 ));
-        List<NotificationLog> notificationLogList = notificationLogRepository.findByStatus(NotificationLog.NotificationStatus.PENDING);
+        List<NotificationLog> notificationLogList = new ArrayList<>();
+
+        if(NotificationLog.NotificationStatus.PENDING.equals(notificationStatus)) {
+            notificationLogList = notificationLogRepository.findByStatusAndRetryCountLessThan(notificationStatus, maxRetries);
+        }else if(NotificationLog.NotificationStatus.FAILED.equals(notificationStatus)) {
+            notificationLogList = notificationLogRepository.findByStatusAndRetryCountLessThan(notificationStatus, maxRetries);
+        }
         List<UUID> showIds = notificationLogList.stream()
                 .map(NotificationLog::getShowId)
                 .distinct()
@@ -62,14 +71,17 @@ public class EmailNotificationSenderService {
             }
             ZeptoMailRequest request = createMailRequest(user, notificationLog, emailTemplateMap, showReleaseStateMap);
             ZeptoMailResponse response = zeptoMailEmailClient.sendMail(request);
+            notificationLog.setLastAttemptAt(Instant.now());
             if(response != null && response.data() != null && !response.data().isEmpty() &&
                     ApplicationConstants.ZEPTO_SUCCESS_CODE.equals(response.data().getFirst().code())){
                 log.info("Email sent successfully {}", notificationLog.getIdempotencyKey());
                 notificationLog.setStatus(NotificationLog.NotificationStatus.SENT);
+
             }else{
                 log.error("Email sent failed: {}", notificationLog.getIdempotencyKey());
                 notificationLog.setStatus(NotificationLog.NotificationStatus.FAILED);
                 notificationLog.setRetryCount(notificationLog.getRetryCount() + 1);
+                notificationLog.setFailedAt(Instant.now());
             }
         });
         notificationLogRepository.saveAll(notificationLogList);

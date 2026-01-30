@@ -1,5 +1,6 @@
 package com.p2.isitout.controller;
 
+import com.p2.isitout.entity.NotificationLog;
 import com.p2.isitout.service.EmailNotificationSenderService;
 import com.p2.isitout.service.EpisodeNotificationEnqueuerService;
 import com.p2.isitout.service.ShowReleaseDetectionService;
@@ -20,8 +21,8 @@ public class TestController {
     @PostMapping("/send/mail")
     public Object sendEMail(){
 //        showReleaseDetectionService.detectAndProcessNewReleases();
-        episodeNotificationEnqueuerService.enqueue();
-        emailNotificationSenderService.sendPending();
+//        episodeNotificationEnqueuerService.enqueue();
+//        emailNotificationSenderService.sendEmails(NotificationLog.NotificationStatus.PENDING);
         return "Success";
     }
 

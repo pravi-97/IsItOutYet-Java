@@ -51,19 +51,19 @@ public class EpisodeNotificationEnqueuerService {
                 UUID userId = userShow.getUser().getUserId();
 
                 // 1️⃣ EPISODE_RELEASE
-                if (!airTime.isAfter(now)) {
-                    enqueueNotification(
-                            NotificationType.EPISODE_RELEASE, state.getShowId(), season, episode, userId, now);
-                }
+                if (!airTime.isAfter(now) && userShow.isNotifyEpisodeOnReleaseDay()){
+                        enqueueNotification(
+                                NotificationType.EPISODE_RELEASE, state.getShowId(), season, episode, userId, now);
+                    }
 
                 // 2️⃣ REMINDER_TODAY
-                if (airDate.equals(today) && airTime.isAfter(now)) {
+                if (airDate.equals(today) && airTime.isAfter(now) && userShow.isNotifyEpisodeOnReleaseDay()) {
                     enqueueNotification(
                             NotificationType.REMINDER_TODAY, state.getShowId(), season, episode, userId, now);
                 }
 
                 // 3️⃣ REMINDER_TOMORROW
-                if (airDate.equals(tomorrow)) {
+                if (airDate.equals(tomorrow) && userShow.isNotifyEpisodeDayBefore()) {
                     enqueueNotification(
                             NotificationType.REMINDER_TOMORROW, state.getShowId(), season, episode, userId, now);
                 }
