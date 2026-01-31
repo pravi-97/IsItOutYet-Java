@@ -3,7 +3,6 @@ package com.p2.isitout.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.p2.isitout.client.tmdb.TmdbClient;
 import com.p2.isitout.client.tmdb.dto.TmdbTvShowDetailsDto;
-import com.p2.isitout.client.tmdb.dto.TmdbTvShowDto;
 import com.p2.isitout.dto.ResponseDTO;
 import com.p2.isitout.dto.UserDto;
 import com.p2.isitout.dto.response.MyDetailsDto;

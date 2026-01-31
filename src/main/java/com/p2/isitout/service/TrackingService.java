@@ -1,11 +1,16 @@
 package com.p2.isitout.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.p2.isitout.client.tmdb.TmdbClient;
+import com.p2.isitout.client.tmdb.dto.TmdbTvShowDetailsDto;
 import com.p2.isitout.client.tvmaze.TvMazeClient;
 import com.p2.isitout.client.tvmaze.dto.EpisodeDetails;
 import com.p2.isitout.client.tvmaze.dto.TvMazeShowDto;
 import com.p2.isitout.dto.ResponseDTO;
+import com.p2.isitout.dto.UserShowDto;
 import com.p2.isitout.dto.request.TrackShowRequest;
+import com.p2.isitout.dto.request.UpdateTrackShow;
+import com.p2.isitout.dto.response.MyShowListDto;
 import com.p2.isitout.entity.Show;
 import com.p2.isitout.entity.ShowReleaseState;
 import com.p2.isitout.entity.User;
@@ -23,7 +28,9 @@ import org.springframework.stereotype.Service;
 import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -36,8 +43,9 @@ public class TrackingService {
     private final UserShowRepository userShowRepository;
     private final ShowReleaseStateRepository showReleaseStateRepository;
     private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
 
-    public TrackingService(AuthService authService, TmdbClient tmdbClient, ShowRepository showRepo, TvMazeClient tvMazeClient, UserShowRepository userShowRepository, ShowReleaseStateRepository showReleaseStateRepository, UserRepository userRepository) {
+    public TrackingService(AuthService authService, TmdbClient tmdbClient, ShowRepository showRepo, TvMazeClient tvMazeClient, UserShowRepository userShowRepository, ShowReleaseStateRepository showReleaseStateRepository, UserRepository userRepository, ObjectMapper objectMapper) {
         this.authService = authService;
         this.tmdbClient = tmdbClient;
         this.showRepo = showRepo;
@@ -45,6 +53,7 @@ public class TrackingService {
         this.userShowRepository = userShowRepository;
         this.showReleaseStateRepository = showReleaseStateRepository;
         this.userRepository = userRepository;
+        this.objectMapper = objectMapper;
     }
 
 //    @Transactional
@@ -64,6 +73,7 @@ public class TrackingService {
             userShow.setTracking(trackShowRequest.isTracking());
             userShow.setNotifyNewSeason(trackShowRequest.isNotifyNewSeason());
             userShow.setNotifyNewEpisode(trackShowRequest.isNotifyNewEpisode());
+            userShow.setNotifyEpisodeOnReleaseDay(trackShowRequest.isNotifyEpisodeOnReleaseDay());
             userShow.setNotifySeasonConfirmed(trackShowRequest.isNotifySeasonConfirmed());
             userShow.setUser(getUserFromEmail());
             userShow.setShow(show);
@@ -159,5 +169,78 @@ public class TrackingService {
         }else {
             throw new RuntimeException("Email ID not found in Database!");
         }
+    }
+
+    public ResponseEntity<ResponseDTO> getAllTrackedShows() {
+        List<MyShowListDto> myShowListDtoList = new ArrayList<>();
+        ResponseDTO responseDto = createDefaultResponseDTO();
+        try{
+            UUID userId = authService.extractUserId();
+            List<UserShow> userShowList = userShowRepository.findByUser_UserId(userId);
+            for(UserShow userShow: userShowList){
+                MyShowListDto myShowListDto = new MyShowListDto();
+                Show show = userShow.getShow();
+                myShowListDto.setShowId(show.getShowId());
+                myShowListDto.setUserShowDto(userShowToDto(userShow));
+                myShowListDto.setTmdbTvShowDetailsDto(getTmdbData(show.getTmdbId()));
+                myShowListDtoList.add(myShowListDto);
+            }
+            responseDto.setData(myShowListDtoList);
+            responseDto.setMessage("Fetched All Tracked Shows");
+        }catch (RuntimeException e){
+            responseDto.setStatusCode(500);
+            responseDto.setMessage(e.getMessage());
+            responseDto.setData(null);
+            responseDto.setMessage("Failed to Fetch All Tracked Shows");
+        }
+        return buildResponse(responseDto);
+    }
+
+    private TmdbTvShowDetailsDto getTmdbData(String tmdbId) {
+        return tmdbClient.getTvShowById(tmdbId);
+    }
+
+    public UserShowDto userShowToDto(UserShow us) {
+        UserShowDto dto = new UserShowDto();
+
+        dto.setUserId(us.getUser().getUserId());
+        dto.setShowId(us.getShow().getShowId());
+
+        dto.setTracking(us.isTracking());
+        dto.setNotifyNewEpisode(us.isNotifyNewEpisode());
+        dto.setNotifyNewSeason(us.isNotifyNewSeason());
+        dto.setNotifyEpisodeDayBefore(us.isNotifyEpisodeDayBefore());
+        dto.setNotifyEpisodeOnReleaseDay(us.isNotifyEpisodeOnReleaseDay());
+        dto.setNotifyEpisodeAfterRelease(us.isNotifyEpisodeAfterRelease());
+        dto.setNotifySeasonConfirmed(us.isNotifySeasonConfirmed());
+        dto.setAddedAt(us.getAddedAt());
+
+        return dto;
+    }
+
+    public ResponseEntity<ResponseDTO> updateTrackedShows(List<UpdateTrackShow> trackShowRequestList) {
+        ResponseDTO responseDto = createDefaultResponseDTO();
+        List<UserShow> userShowList = new ArrayList<>();
+        try{
+            for(UpdateTrackShow updateTrackShow: trackShowRequestList){
+                UserShow userShow = userShowRepository.findByUser_UserIdAndShow_ShowId(updateTrackShow.getUserId(), updateTrackShow.getShowId());
+                userShow.setNotifyEpisodeAfterRelease(updateTrackShow.getNotifyEpisodeAfterRelease());
+                userShow.setNotifyEpisodeDayBefore(updateTrackShow.getNotifyEpisodeDayBefore());
+                userShow.setNotifyEpisodeOnReleaseDay(updateTrackShow.getNotifyEpisodeOnReleaseDay());
+                userShow.setNotifyNewSeason(updateTrackShow.getNotifyNewSeason());
+                userShow.setNotifySeasonConfirmed(updateTrackShow.getNotifySeasonConfirmed());
+                userShow.setNotifyNewEpisode(updateTrackShow.getNotifyEpisodeAfterRelease() || updateTrackShow.getNotifyEpisodeDayBefore() || updateTrackShow.getNotifyEpisodeOnReleaseDay());
+                userShowList.add(userShow);
+            }
+            userShowRepository.saveAll(userShowList);
+            responseDto.setStatusCode(200);
+            responseDto.setMessage("Successfully Updated Tracked Shows");
+        } catch (RuntimeException e) {
+            responseDto.setStatusCode(500);
+            responseDto.setData(null);
+            responseDto.setMessage("Failed to Update Tracked Shows");
+            return buildResponse(responseDto);
+        }
+        return buildResponse(responseDto);
     }
 }

@@ -21,4 +21,8 @@ public interface UserShowRepository extends JpaRepository<UserShow, UserShowId> 
     List<String> findShowsByUserIds(UUID userId);
 
     List<UserShow> findByShow_ShowIdAndNotifySeasonConfirmedTrue(UUID showId);
+
+    List<UserShow> findByUser_UserId(UUID userId);
+
+    UserShow findByUser_UserIdAndShow_ShowId(UUID userId, UUID showId);
 }
