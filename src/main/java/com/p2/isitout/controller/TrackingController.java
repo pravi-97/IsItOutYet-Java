@@ -30,7 +30,12 @@ public class TrackingController {
     }
 
     @PutMapping("/update")
-    public ResponseEntity<ResponseDTO> update(@RequestBody List<UpdateTrackShow> trackShowRequestList) {
+    public ResponseEntity<ResponseDTO> updateTrackedShows(@RequestBody List<UpdateTrackShow> trackShowRequestList) {
         return trackingService.updateTrackedShows(trackShowRequestList);
+    }
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<ResponseDTO> deleteTrackedShows(@RequestBody List<String> showIds) {
+        return trackingService.deleteTrackedShows(showIds);
     }
 }

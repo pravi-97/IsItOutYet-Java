@@ -24,6 +24,7 @@ import com.p2.isitout.security.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.time.Instant;
@@ -239,6 +240,26 @@ public class TrackingService {
             responseDto.setStatusCode(500);
             responseDto.setData(null);
             responseDto.setMessage("Failed to Update Tracked Shows");
+            return buildResponse(responseDto);
+        }
+        return buildResponse(responseDto);
+    }
+
+    @Transactional
+    public ResponseEntity<ResponseDTO> deleteTrackedShows(List<String> showIds) {
+        ResponseDTO responseDto = createDefaultResponseDTO();
+        try{
+            UUID userId = authService.extractUserId();
+            for(String showId: showIds){
+                userShowRepository.deleteByShow_TmdbIdAndUser_UserId(showId, userId);
+            }
+            responseDto.setStatusCode(200);
+            responseDto.setMessage("Successfully Deleted Tracked Shows");
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            responseDto.setStatusCode(500);
+            responseDto.setData(null);
+            responseDto.setMessage("Failed to Delete Tracked Shows");
             return buildResponse(responseDto);
         }
         return buildResponse(responseDto);
