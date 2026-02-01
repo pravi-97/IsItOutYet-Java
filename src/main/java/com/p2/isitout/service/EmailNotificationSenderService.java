@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -37,6 +38,7 @@ public class EmailNotificationSenderService {
     private final UserRepository userRepository;
 
     public void sendEmails(NotificationLog.NotificationStatus notificationStatus) {
+        log.info("Starting EmailNotificationSenderService on {} ", LocalDateTime.now());
         EnumMap<NotificationType, EmailTemplate> emailTemplateMap = emailTemplateRepository.findAll()
                 .stream()
                 .collect(Collectors.toMap(
@@ -47,6 +49,7 @@ public class EmailNotificationSenderService {
                 ));
         List<NotificationLog> notificationLogList;
         notificationLogList = notificationLogRepository.findByStatusAndRetryCountLessThan(notificationStatus, maxRetries);
+
         List<UUID> showIds = notificationLogList.stream()
                 .map(NotificationLog::getShowId)
                 .distinct()
@@ -80,6 +83,8 @@ public class EmailNotificationSenderService {
             }
         });
         notificationLogRepository.saveAll(notificationLogList);
+        log.info("Ending EmailNotificationSenderService on {} ", LocalDateTime.now());
+
     }
 
     private Map<UUID, User> fetchUserDetails(List<NotificationLog> notificationLogList) {

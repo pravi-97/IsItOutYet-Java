@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class EpisodeNotificationEnqueuerService {
     private final NotificationLogRepository notificationLogRepository;
 
     public void enqueue() {
+        log.info("Starting EpisodeNotificationEnqueuerService on {} ", LocalDateTime.now());
         Instant now = Instant.now();
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         LocalDate tomorrow = today.plusDays(1);
@@ -69,6 +71,7 @@ public class EpisodeNotificationEnqueuerService {
                 }
             }
         }
+        log.info("Ending EpisodeNotificationEnqueuerService on {} ", LocalDateTime.now());
     }
 
     private void enqueueNotification(

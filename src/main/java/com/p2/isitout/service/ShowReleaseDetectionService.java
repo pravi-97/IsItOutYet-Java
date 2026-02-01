@@ -14,6 +14,7 @@ import com.p2.isitout.repository.UserShowRepository;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class ShowReleaseDetectionService {
     }
 
     public void detectAndProcessNewReleases() {
+        log.info("Starting ShowReleaseDetectionService on {} ", LocalDateTime.now());
         Instant start = Instant.now();
         Map<UUID, TvMazeShowDto> tvMazeMap = new HashMap<>();
         List<ShowReleaseState> showReleaseStates = showReleaseStateRepository.findAllByShow_Status("Running");
@@ -43,6 +45,7 @@ public class ShowReleaseDetectionService {
         });
         compareAndUpdate(tvMazeMap, showReleaseStates);
         log.info("Polling {} shows took {} ms", showReleaseStates.size(), Duration.between(start, Instant.now()).toMillis());
+        log.info("Ending ShowReleaseDetectionService on {} ", LocalDateTime.now());
     }
 
     private void compareAndUpdate(Map<UUID, TvMazeShowDto> tvMazeMap, List<ShowReleaseState> dbStates) {

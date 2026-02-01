@@ -20,6 +20,6 @@ public class SendEmailScheduler {
 
     @Scheduled(cron = "${jobs.email-send.cron}")
     public void sendFailedEmails() {
-        emailNotificationSenderService.sendEmails(NotificationLog.NotificationStatus.PENDING);
+        emailNotificationSenderService.sendEmails(NotificationLog.NotificationStatus.FAILED);
     }
 }
