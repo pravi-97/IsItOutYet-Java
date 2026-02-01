@@ -29,6 +29,7 @@ public class EpisodeNotificationEnqueuerService {
     private final UserShowRepository userShowRepository;
     private final NotificationLogRepository notificationLogRepository;
 
+    @Transactional
     public void enqueue() {
         log.info("Starting EpisodeNotificationEnqueuerService on {} ", LocalDateTime.now());
         Instant now = Instant.now();

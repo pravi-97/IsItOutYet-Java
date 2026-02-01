@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -37,6 +38,7 @@ public class EmailNotificationSenderService {
     private final EmailTemplateRepository emailTemplateRepository;
     private final UserRepository userRepository;
 
+    @Transactional
     public void sendEmails(NotificationLog.NotificationStatus notificationStatus) {
         log.info("Starting EmailNotificationSenderService on {} ", LocalDateTime.now());
         EnumMap<NotificationType, EmailTemplate> emailTemplateMap = emailTemplateRepository.findAll()
