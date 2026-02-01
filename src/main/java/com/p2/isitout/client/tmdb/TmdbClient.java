@@ -17,12 +17,12 @@ public class TmdbClient {
         this.webClient = webClient;
     }
 
-    public TmdbSearchResponse searchTvShows(String query, int page) {
+    public TmdbSearchResponse searchTvShows(String query, int page, boolean nsfw) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/search/tv")
                         .queryParam("query", query)
-                        .queryParam("include_adult", true)
+                        .queryParam("include_adult", nsfw)
                         .queryParam("language", "en-US")
                         .queryParam("page",page)
                         .build()
@@ -45,11 +45,11 @@ public class TmdbClient {
                 .block();
     }
 
-    public TmdbSearchResponse trendingTvShows(int page) {
+    public TmdbSearchResponse trendingTvShows(int page, boolean nsfw) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/discover/tv")
-                        .queryParam("include_adult", true)
+                        .queryParam("include_adult", nsfw)
                         .queryParam("include_null_first_air_dates", true)
                         .queryParam("sort_by", "popularity.desc")
                         .queryParam("page",page)

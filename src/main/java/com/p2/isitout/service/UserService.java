@@ -11,14 +11,18 @@ import com.p2.isitout.repository.UserRepository;
 import com.p2.isitout.repository.UserShowRepository;
 import com.p2.isitout.security.AuthService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -71,7 +75,7 @@ public class UserService {
             userDto = objectMapper.convertValue(user, UserDto.class);
         }
         catch(Exception e){
-            e.printStackTrace();
+            log.error("An error occurred when converting User to UserDto");
         }
         return userDto;
     }
@@ -104,5 +108,60 @@ public class UserService {
         return ResponseEntity
                 .status(status)
                 .body(responseDto);
+    }
+
+    public ResponseEntity<ResponseDTO> getUserDetailsMini() {
+        ResponseDTO responseDto =  createDefaultResponseDTO();
+        try{
+            UUID userId = authService.extractUserId();
+            Optional<User> userOptional = userRepo.findById(userId);
+            if(userOptional.isEmpty()){
+                responseDto.setStatusCode(404);
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID " + userId);
+            }
+            User user = userOptional.get();
+            responseDto.setData(userToDto(user));
+            responseDto.setMessage("Successfully fetchedUser Details");
+            responseDto.setStatus(true);
+            responseDto.setStatusCode(200);
+        }
+        catch(Exception e){
+            responseDto.setMessage(e.getMessage());
+            responseDto.setStatus(false);
+            return buildResponse(responseDto);
+        }
+        return buildResponse(responseDto);
+    }
+
+    public ResponseEntity<ResponseDTO> updateUserDetails(String name) {
+        ResponseDTO responseDto =  createDefaultResponseDTO();
+        try{
+            UUID userId = authService.extractUserId();
+            Optional<User> userOptional = userRepo.findById(userId);
+            if(userOptional.isEmpty()){
+                responseDto.setStatusCode(404);
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID " + userId);
+            }
+            User user = userOptional.get();
+            if(name == null || name.trim().isEmpty()){
+                responseDto.setStatusCode(400);
+                throw new IllegalArgumentException("User name cannot be null or empty");
+            }
+            if(user.getName() != null && !user.getName().isEmpty()){
+                responseDto.setStatusCode(409);
+                throw new IllegalStateException("User's Name cannot be updated because name already exist!");
+            }
+            user.setName(name.trim());
+            userRepo.save(user);
+            responseDto.setMessage("Successfully updated User Details");
+            responseDto.setStatus(true);
+            responseDto.setStatusCode(200);
+        }
+        catch(Exception e){
+            responseDto.setMessage(e.getMessage());
+            responseDto.setStatus(false);
+            return buildResponse(responseDto);
+        }
+        return buildResponse(responseDto);
     }
 }

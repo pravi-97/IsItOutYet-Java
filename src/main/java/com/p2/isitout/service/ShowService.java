@@ -17,10 +17,10 @@ public class ShowService {
         this.tmdbClient = tmdbClient;
     }
 
-    public ResponseEntity<ResponseDTO> searchTvShows(String name, int page) {
+    public ResponseEntity<ResponseDTO> searchTvShows(String name, int page, boolean nsfw) {
         ResponseDTO responseDto = createDefaultResponseDTO();
         try{
-            TmdbSearchResponse resp = tmdbClient.searchTvShows(name, page);
+            TmdbSearchResponse resp = tmdbClient.searchTvShows(name, page, nsfw);
             responseDto.setData(resp);
             responseDto.setMessage("Success!");
             return buildResponse(responseDto);
@@ -50,10 +50,10 @@ public class ShowService {
                 .body(responseDto);
     }
 
-    public ResponseEntity<ResponseDTO> getTrendingTvShows(int page) {
+    public ResponseEntity<ResponseDTO> getTrendingTvShows(int page, boolean nsfw) {
         ResponseDTO responseDto = createDefaultResponseDTO();
         try{
-            TmdbSearchResponse resp = tmdbClient.trendingTvShows(page);
+            TmdbSearchResponse resp = tmdbClient.trendingTvShows(page, nsfw);
             responseDto.setData(resp);
             responseDto.setMessage("Success!");
             return buildResponse(responseDto);

@@ -16,13 +16,13 @@ public class ShowSearchController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<ResponseDTO> searchTvShows(@RequestParam String name, @RequestParam int page){
-        return showService.searchTvShows(name, page);
+    public ResponseEntity<ResponseDTO> searchTvShows(@RequestParam String name, @RequestParam int page, @RequestParam(defaultValue = "true") boolean nsfw){
+        return showService.searchTvShows(name, page, nsfw);
     }
 
     @GetMapping("/trending")
-    public ResponseEntity<ResponseDTO> trendingTvShows(@RequestParam int page){
-        return showService.getTrendingTvShows(page);
+    public ResponseEntity<ResponseDTO> trendingTvShows(@RequestParam int page, @RequestParam(defaultValue = "false") boolean nsfw){
+        return showService.getTrendingTvShows(page, nsfw);
     }
 
     @GetMapping("/{showId}")
