@@ -45,13 +45,8 @@ public class EmailNotificationSenderService {
                         (a, b) -> b,
                         () -> new EnumMap<>(NotificationType.class)
                 ));
-        List<NotificationLog> notificationLogList = new ArrayList<>();
-
-        if(NotificationLog.NotificationStatus.PENDING.equals(notificationStatus)) {
-            notificationLogList = notificationLogRepository.findByStatusAndRetryCountLessThan(notificationStatus, maxRetries);
-        }else if(NotificationLog.NotificationStatus.FAILED.equals(notificationStatus)) {
-            notificationLogList = notificationLogRepository.findByStatusAndRetryCountLessThan(notificationStatus, maxRetries);
-        }
+        List<NotificationLog> notificationLogList;
+        notificationLogList = notificationLogRepository.findByStatusAndRetryCountLessThan(notificationStatus, maxRetries);
         List<UUID> showIds = notificationLogList.stream()
                 .map(NotificationLog::getShowId)
                 .distinct()

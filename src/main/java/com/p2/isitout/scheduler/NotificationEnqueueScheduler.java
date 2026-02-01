@@ -1,6 +1,5 @@
 package com.p2.isitout.scheduler;
 
-import com.p2.isitout.service.EmailNotificationSenderService;
 import com.p2.isitout.service.EpisodeNotificationEnqueuerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;

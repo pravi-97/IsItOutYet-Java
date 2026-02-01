@@ -58,7 +58,7 @@ public class ShowReleaseDetectionService {
             dbStatus = dbStatus == null ? "Running" : dbStatus;
 
             // ENDED DETECTION
-            if ("Running".equalsIgnoreCase(dbStatus) && isEndedStatus(apiStatus)) {
+            if (!isEndedStatus(dbStatus) && isEndedStatus(apiStatus)) {
                 handleShowEnded(state);
 
                 state.getShow().setStatus(apiStatus);
@@ -69,7 +69,7 @@ public class ShowReleaseDetectionService {
             }
 
             // CANCELLED DETECTION
-            if ("Running".equalsIgnoreCase(dbStatus) && isCancelledStatus(apiStatus)) {
+            if (!isCancelledStatus(dbStatus) && isCancelledStatus(apiStatus)) {
                 handleShowCancelled(state);
 
                 state.getShow().setStatus(apiStatus);
