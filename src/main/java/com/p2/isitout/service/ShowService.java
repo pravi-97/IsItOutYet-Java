@@ -50,10 +50,10 @@ public class ShowService {
                 .body(responseDto);
     }
 
-    public ResponseEntity<ResponseDTO> getTrendingTvShows(int page, boolean nsfw) {
+    public ResponseEntity<ResponseDTO> getTrendingTvShows(int page) {
         ResponseDTO responseDto = createDefaultResponseDTO();
         try{
-            TmdbSearchResponse resp = tmdbClient.trendingTvShows(page, nsfw);
+            TmdbSearchResponse resp = tmdbClient.trendingTvShows(page);
             responseDto.setData(resp);
             responseDto.setMessage("Success!");
             return buildResponse(responseDto);
@@ -69,6 +69,21 @@ public class ShowService {
         ResponseDTO responseDto = createDefaultResponseDTO();
         try{
             TmdbTvShowDetailsDto resp = tmdbClient.getTvShowById(showId);
+            responseDto.setData(resp);
+            responseDto.setMessage("Success!");
+            return buildResponse(responseDto);
+        }catch(Exception e){
+            e.printStackTrace();
+            responseDto.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            responseDto.setMessage(e.getMessage());
+            return buildResponse(responseDto);
+        }
+    }
+
+    public ResponseEntity<ResponseDTO> tvShowsReleasingToday(int page) {
+        ResponseDTO responseDto = createDefaultResponseDTO();
+        try{
+            TmdbSearchResponse resp = tmdbClient.tvShowsReleasingToday(page);
             responseDto.setData(resp);
             responseDto.setMessage("Success!");
             return buildResponse(responseDto);

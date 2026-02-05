@@ -45,13 +45,23 @@ public class TmdbClient {
                 .block();
     }
 
-    public TmdbSearchResponse trendingTvShows(int page, boolean nsfw) {
+    public TmdbSearchResponse trendingTvShows(int page) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/discover/tv")
-                        .queryParam("include_adult", nsfw)
-                        .queryParam("include_null_first_air_dates", true)
-                        .queryParam("sort_by", "popularity.desc")
+                        .path("/trending/tv/day")
+                        .queryParam("page",page)
+                        .build()
+                )
+                .retrieve()
+                .bodyToMono(TmdbSearchResponse.class)
+                .block();
+    }
+
+    public TmdbSearchResponse tvShowsReleasingToday(int page) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/tv/airing_today")
+                        .queryParam("language", "en-US")
                         .queryParam("page",page)
                         .build()
                 )

@@ -21,8 +21,13 @@ public class ShowSearchController {
     }
 
     @GetMapping("/trending")
-    public ResponseEntity<ResponseDTO> trendingTvShows(@RequestParam int page, @RequestParam(defaultValue = "false") boolean nsfw){
-        return showService.getTrendingTvShows(page, nsfw);
+    public ResponseEntity<ResponseDTO> trendingTvShows(@RequestParam int page){
+        return showService.getTrendingTvShows(page);
+    }
+
+    @GetMapping("releasing-today")
+    public ResponseEntity<ResponseDTO> tvShowsReleasingToday(@RequestParam int page){
+        return showService.tvShowsReleasingToday(page);
     }
 
     @GetMapping("/{showId}")

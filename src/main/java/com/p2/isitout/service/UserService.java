@@ -44,6 +44,7 @@ public class UserService {
                 List<String> roles = new ArrayList<>(List.of("USER"));
                 uuid = createNewUser(email);
                 authService.setCustomClaims(uuid,roles);
+                sendWelcomeEmail();
             }
             myDetails.setUserDto(userToDto(user));
             myDetails.setShowDetails(getTrackedShowsByUserId(user == null ? uuid : user.getUserId()));
@@ -56,6 +57,10 @@ public class UserService {
             responseDto.setStatusCode(500);
             return buildResponse(responseDto);
         }
+    }
+
+    private void sendWelcomeEmail() {
+        //TODO: Send welcome Email
     }
 
     private List<TmdbTvShowDetailsDto> getTrackedShowsByUserId(UUID userId) {

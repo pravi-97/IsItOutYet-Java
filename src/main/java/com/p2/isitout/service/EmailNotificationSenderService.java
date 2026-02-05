@@ -103,7 +103,11 @@ public class EmailNotificationSenderService {
     }
 
     private ZeptoMailRequest createMailRequest(User user, NotificationLog notificationLog, Map<NotificationType, EmailTemplate> emailTemplateMap, Map<UUID, ShowReleaseState> showReleaseStateMap) {
-        Map<String, String> emailParams = getEmailParams(notificationLog, user.getName(), emailTemplateMap, showReleaseStateMap);
+        String userName = user.getName();
+        if(null == userName || userName.isEmpty()){
+            userName = user.getUsername();
+        }
+        Map<String, String> emailParams = getEmailParams(notificationLog, userName, emailTemplateMap, showReleaseStateMap);
         return new ZeptoMailRequest(new ZeptoMailRequest
                 .From(fromAddress, fromName), List.of(new ZeptoMailRequest
                 .To(new ZeptoMailRequest
