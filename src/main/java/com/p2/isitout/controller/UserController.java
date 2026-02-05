@@ -29,4 +29,9 @@ public class UserController {
     public ResponseEntity<ResponseDTO> updateUserDetails(@RequestParam String name){
         return userService.updateUserDetails(name);
     }
+
+    @DeleteMapping()
+    public ResponseEntity<ResponseDTO> deleteUser(){
+        return userService.deleteUser();
+    }
 }

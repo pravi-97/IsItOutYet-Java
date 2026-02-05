@@ -165,8 +165,36 @@ public class UserService {
         catch(Exception e){
             responseDto.setMessage(e.getMessage());
             responseDto.setStatus(false);
+//            responseDto.setStatusCode(500);
             return buildResponse(responseDto);
         }
         return buildResponse(responseDto);
+    }
+
+    public ResponseEntity<ResponseDTO> deleteUser() {
+        ResponseDTO responseDto =  createDefaultResponseDTO();
+        try{
+            final String email = authService.extractEmail();
+            User user = userRepo.findByEmail(email);
+            if(user == null){
+                responseDto.setStatusCode(404);
+                responseDto.setStatus(false);
+                responseDto.setMessage("User not found with email " + email);
+                return buildResponse(responseDto);
+            }
+            userShowRepository.deleteByUser_UserId(user.getUserId());
+            userRepo.deleteById(user.getUserId());
+            authService.deleteUser();
+            responseDto.setStatusCode(200);
+            responseDto.setStatus(true);
+            responseDto.setMessage("User Account Deleted Successfully");
+            return buildResponse(responseDto);
+        }
+        catch(Exception e){
+            responseDto.setMessage(e.getMessage());
+            responseDto.setStatus(false);
+            responseDto.setStatusCode(500);
+            return buildResponse(responseDto);
+        }
     }
 }

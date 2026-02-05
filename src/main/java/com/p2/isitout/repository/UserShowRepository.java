@@ -27,4 +27,6 @@ public interface UserShowRepository extends JpaRepository<UserShow, UserShowId> 
     UserShow findByUser_UserIdAndShow_ShowId(UUID userId, UUID showId);
 
     void deleteByShow_TmdbIdAndUser_UserId(String showId, UUID userId);
+
+    void deleteByUser_UserId(UUID userId);
 }

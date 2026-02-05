@@ -49,6 +49,10 @@ public class AuthService {
         FirebaseAuth.getInstance().setCustomUserClaims(extractFirebaseUid(), claims);
     }
 
+    public void deleteUser() throws FirebaseAuthException {
+        FirebaseAuth.getInstance().deleteUser(extractFirebaseUid());
+    }
+
     public String extractUserName() {
         return getTokenFromContext().getName();
     }
