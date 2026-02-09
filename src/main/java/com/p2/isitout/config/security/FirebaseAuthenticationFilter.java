@@ -18,6 +18,12 @@ import java.util.List;
 public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.equals("/health") || path.startsWith("/auth");
+    }
+
+    @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             @NonNull HttpServletResponse response,
