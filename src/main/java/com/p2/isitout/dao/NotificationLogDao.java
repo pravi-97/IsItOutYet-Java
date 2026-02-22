@@ -28,18 +28,27 @@ public class NotificationLogDao {
             @Override
             public void setValues(PreparedStatement ps, int i) throws SQLException {
                 NotificationLog n = notifications.get(i);
+//                ps.setObject(1, n.getNotificationId());
+//                ps.setObject(2, n.getUserId());
+//                ps.setObject(3, n.getShowId());
+//                ps.setObject(4, n.getSeasonNumber());
+//                ps.setObject(5, n.getEpisodeNumber());
+//                ps.setString(6, n.getNotificationType().name());
+//                ps.setString(7, n.getStatus().name());
+//                ps.setString(8, n.getIdempotencyKey());
+//                ps.setObject(9, n.getTriggeredAt());
+//                ps.setObject(10, n.getSentAt());
                 ps.setObject(1, n.getNotificationId());
                 ps.setObject(2, n.getUserId());
                 ps.setObject(3, n.getShowId());
-                ps.setObject(4, n.getSeasonNumber());
-                ps.setObject(5, n.getEpisodeNumber());
+                ps.setInt(4, n.getSeasonNumber());
+                ps.setInt(5, n.getEpisodeNumber());
                 ps.setString(6, n.getNotificationType().name());
                 ps.setString(7, n.getStatus().name());
                 ps.setString(8, n.getIdempotencyKey());
-                ps.setObject(9, n.getTriggeredAt());
-                ps.setObject(10, n.getSentAt());
+                ps.setTimestamp(9, n.getTriggeredAt() != null ? java.sql.Timestamp.from(n.getTriggeredAt()) : null);
+                ps.setTimestamp(10, n.getSentAt() != null ? java.sql.Timestamp.from(n.getSentAt()) : null);
             }
-
             @Override
             public int getBatchSize() {
                 return notifications.size();
