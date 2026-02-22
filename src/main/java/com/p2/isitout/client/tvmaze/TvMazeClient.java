@@ -1,6 +1,7 @@
 package com.p2.isitout.client.tvmaze;
 
 import com.p2.isitout.client.tvmaze.dto.TvMazeShowDto;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -8,6 +9,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 import java.util.Map;
 
+@Slf4j
 @Component
 public class TvMazeClient {
 
@@ -103,7 +105,9 @@ public class TvMazeClient {
         if (retryAfter != null) {
             try {
                 return Long.parseLong(retryAfter) * 1000;
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+                log.error("NumberFormatException: retryAfter: {}", retryAfter);
+            }
         }
         return fallbackMillis;
     }

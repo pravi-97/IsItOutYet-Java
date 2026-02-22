@@ -6,6 +6,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -15,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
+@Slf4j
 public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
@@ -49,12 +51,11 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
             } catch (Exception e) {
-                e.printStackTrace(); // IMPORTANT
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
         } else {
-            System.out.println("No Authorization header");
+            log.error("No Authorization header");
         }
 
         filterChain.doFilter(request, response);

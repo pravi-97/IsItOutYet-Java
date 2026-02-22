@@ -165,7 +165,7 @@ public class UserService {
         catch(Exception e){
             responseDto.setMessage(e.getMessage());
             responseDto.setStatus(false);
-//            responseDto.setStatusCode(500);
+            responseDto.setStatusCode(500);
             return buildResponse(responseDto);
         }
         return buildResponse(responseDto);

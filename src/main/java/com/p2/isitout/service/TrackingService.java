@@ -1,6 +1,5 @@
 package com.p2.isitout.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.p2.isitout.client.tmdb.TmdbClient;
 import com.p2.isitout.client.tmdb.dto.TmdbTvShowDetailsDto;
 import com.p2.isitout.client.tvmaze.TvMazeClient;
@@ -44,9 +43,8 @@ public class TrackingService {
     private final UserShowRepository userShowRepository;
     private final ShowReleaseStateRepository showReleaseStateRepository;
     private final UserRepository userRepository;
-    private final ObjectMapper objectMapper;
 
-    public TrackingService(AuthService authService, TmdbClient tmdbClient, ShowRepository showRepo, TvMazeClient tvMazeClient, UserShowRepository userShowRepository, ShowReleaseStateRepository showReleaseStateRepository, UserRepository userRepository, ObjectMapper objectMapper) {
+    public TrackingService(AuthService authService, TmdbClient tmdbClient, ShowRepository showRepo, TvMazeClient tvMazeClient, UserShowRepository userShowRepository, ShowReleaseStateRepository showReleaseStateRepository, UserRepository userRepository) {
         this.authService = authService;
         this.tmdbClient = tmdbClient;
         this.showRepo = showRepo;
@@ -54,7 +52,6 @@ public class TrackingService {
         this.userShowRepository = userShowRepository;
         this.showReleaseStateRepository = showReleaseStateRepository;
         this.userRepository = userRepository;
-        this.objectMapper = objectMapper;
     }
 
 //    @Transactional
