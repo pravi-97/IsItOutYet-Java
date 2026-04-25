@@ -4,18 +4,16 @@ import com.p2.isitout.client.tmdb.TmdbClient;
 import com.p2.isitout.client.tmdb.dto.TmdbSearchResponse;
 import com.p2.isitout.client.tmdb.dto.TmdbTvShowDetailsDto;
 import com.p2.isitout.dto.ResponseDTO;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 @Service
+@AllArgsConstructor
 public class ShowService {
 
     private final TmdbClient tmdbClient;
-
-    public ShowService(TmdbClient tmdbClient){
-        this.tmdbClient = tmdbClient;
-    }
 
     public ResponseEntity<ResponseDTO> searchTvShows(String name, int page, boolean nsfw) {
         ResponseDTO responseDto = createDefaultResponseDTO();

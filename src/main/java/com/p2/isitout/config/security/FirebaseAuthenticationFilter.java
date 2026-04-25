@@ -22,7 +22,7 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.equals("/health") || path.startsWith("/auth");
+        return path.equals("/actuator/health") || path.startsWith("/auth");
     }
 
     @Override
@@ -54,8 +54,6 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
-        } else {
-            log.error("No Authorization header");
         }
 
         filterChain.doFilter(request, response);

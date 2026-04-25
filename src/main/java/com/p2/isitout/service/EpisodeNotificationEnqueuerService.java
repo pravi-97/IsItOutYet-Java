@@ -6,7 +6,6 @@ import com.p2.isitout.entity.NotificationLog;
 import com.p2.isitout.entity.NotificationType;
 import com.p2.isitout.entity.ShowReleaseState;
 import com.p2.isitout.entity.UserShow;
-import com.p2.isitout.repository.NotificationLogRepository;
 import com.p2.isitout.repository.ShowReleaseStateRepository;
 import com.p2.isitout.repository.UserShowRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +22,8 @@ import java.util.List;
 import java.util.UUID;
 
 @Slf4j
-@Service@RequiredArgsConstructor
+@Service
+@RequiredArgsConstructor
 public class EpisodeNotificationEnqueuerService {
 
     private final ShowReleaseStateRepository showReleaseStateRepository;
@@ -95,7 +95,6 @@ public class EpisodeNotificationEnqueuerService {
         notificationLog.setNotificationId(UUID.randomUUID());
         notificationLog.setUserId(userId);
         notificationLog.setShowId(showId);
-        notificationLog.setSentAt(Instant.now());
         notificationLog.setSeasonNumber(season);
         notificationLog.setEpisodeNumber(episode);
         notificationLog.setNotificationType(type);

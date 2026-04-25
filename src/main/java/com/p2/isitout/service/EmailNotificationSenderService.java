@@ -6,7 +6,7 @@ import com.p2.isitout.client.notification.email.dto.ZeptoMailResponse;
 import com.p2.isitout.entity.*;
 import com.p2.isitout.repository.*;
 import com.p2.isitout.utils.ApplicationConstants;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class EmailNotificationSenderService {
 
     private final ShowReleaseStateRepository showReleaseStateRepository;
@@ -65,23 +65,27 @@ public class EmailNotificationSenderService {
                 ));
         Map<UUID, User> users = fetchUserDetails(notificationLogList);
         notificationLogList.forEach(notificationLog -> {
-            User user = users.get(notificationLog.getUserId());
-            if (user == null) {
-                return;
-            }
-            ZeptoMailRequest request = createMailRequest(user, notificationLog, emailTemplateMap, showReleaseStateMap);
-            ZeptoMailResponse response = zeptoMailEmailClient.sendMail(request);
-            notificationLog.setLastAttemptAt(Instant.now());
-            if(response != null && response.data() != null && !response.data().isEmpty() &&
-                    ApplicationConstants.ZEPTO_SUCCESS_CODE.equals(response.data().getFirst().code())){
-                log.info("Email sent successfully {}", notificationLog.getIdempotencyKey());
-                notificationLog.setStatus(NotificationLog.NotificationStatus.SENT);
-
-            }else{
-                log.error("Email sent failed: {}", notificationLog.getIdempotencyKey());
-                notificationLog.setStatus(NotificationLog.NotificationStatus.FAILED);
-                notificationLog.setRetryCount(notificationLog.getRetryCount() + 1);
-                notificationLog.setFailedAt(Instant.now());
+            try {
+                User user = users.get(notificationLog.getUserId());
+                if (user == null) {
+                    throw new IllegalStateException("User not found for notification " + notificationLog.getIdempotencyKey());
+                }
+                ZeptoMailRequest request = createMailRequest(user, notificationLog, emailTemplateMap, showReleaseStateMap);
+                ZeptoMailResponse response = zeptoMailEmailClient.sendMail(request);
+                notificationLog.setLastAttemptAt(Instant.now());
+                if(response != null && response.data() != null && !response.data().isEmpty() &&
+                        ApplicationConstants.ZEPTO_SUCCESS_CODE.equals(response.data().getFirst().code())){
+                    log.info("Email sent successfully {}", notificationLog.getIdempotencyKey());
+                    notificationLog.setStatus(NotificationLog.NotificationStatus.SENT);
+                    notificationLog.setSentAt(Instant.now());
+                    notificationLog.setFailedAt(null);
+                    notificationLog.setLastError(null);
+                }else{
+                    markNotificationFailed(notificationLog, "Email provider returned a non-success response");
+                }
+            } catch (Exception ex) {
+                log.error("Email send failed: {}", notificationLog.getIdempotencyKey(), ex);
+                markNotificationFailed(notificationLog, ex.getMessage());
             }
         });
         notificationLogRepository.saveAll(notificationLogList);
@@ -129,11 +133,26 @@ public class EmailNotificationSenderService {
         emailParams.put("subject", emailTemp.getSubject().replace(ApplicationConstants.EPH_SHOW_NAME, showReleaseState.getShowName()));
         String emailBody = emailTemp.getBody();
         emailBody = emailBody.replace(ApplicationConstants.EPH_USER_NAME, userName)
-                .replace(ApplicationConstants.EPH_SEASON, String.valueOf(notificationLog.getSeasonNumber()))
-                .replace(ApplicationConstants.EPH_EPISODE, String.valueOf(notificationLog.getEpisodeNumber()))
+                .replace(ApplicationConstants.EPH_SEASON, formatNumber(notificationLog.getSeasonNumber()))
+                .replace(ApplicationConstants.EPH_EPISODE, formatNumber(notificationLog.getEpisodeNumber()))
                 .replace(ApplicationConstants.EPH_SHOW_NAME, showReleaseState.getShowName())
-                .replace(ApplicationConstants.EPH_AIR_DATE, String.valueOf(showReleaseState.getNextEpisodeAirDate()));
+                .replace(ApplicationConstants.EPH_AIR_DATE, formatInstant(showReleaseState.getNextEpisodeAirDate()));
         emailParams.put("body", emailBody);
         return emailParams;
+    }
+
+    private String formatNumber(Integer value) {
+        return value == null || value <= 0 ? "" : String.valueOf(value);
+    }
+
+    private String formatInstant(Instant value) {
+        return value != null ? value.toString() : "";
+    }
+
+    private void markNotificationFailed(NotificationLog notificationLog, String message) {
+        notificationLog.setStatus(NotificationLog.NotificationStatus.FAILED);
+        notificationLog.setRetryCount(notificationLog.getRetryCount() != null ? notificationLog.getRetryCount() + 1 : 1);
+        notificationLog.setFailedAt(Instant.now());
+        notificationLog.setLastError(message);
     }
 }
