@@ -20,6 +20,10 @@ public class FirebaseConfig {
 
     @PostConstruct
     public void init() throws IOException {
+        if (!FirebaseApp.getApps().isEmpty()) {
+            return;
+        }
+
         InputStream is = new ByteArrayInputStream(
                 firebaseServiceAccountJson.getBytes(StandardCharsets.UTF_8)
         );

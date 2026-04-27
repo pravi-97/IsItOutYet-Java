@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/track")
@@ -35,7 +36,7 @@ public class TrackingController {
     }
 
     @DeleteMapping("/delete")
-    public ResponseEntity<ResponseDTO> deleteTrackedShows(@RequestBody List<String> showIds) {
+    public ResponseEntity<ResponseDTO> deleteTrackedShows(@RequestBody List<UUID> showIds) {
         return trackingService.deleteTrackedShows(showIds);
     }
 }

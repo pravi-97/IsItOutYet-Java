@@ -36,18 +36,17 @@ public class UserService {
     public ResponseEntity<ResponseDTO> getUserDetails() {
         ResponseDTO responseDto =  createDefaultResponseDTO();
         MyDetailsDto myDetails = new MyDetailsDto();
-        UUID uuid = null;
         try{
             final String email = authService.extractEmail();
             User user = userRepo.findByEmail(email);
             if(user == null){
                 List<String> roles = new ArrayList<>(List.of("USER"));
-                uuid = createNewUser(email);
-                authService.setCustomClaims(uuid,roles);
+                user = createNewUser(email);
+                authService.setCustomClaims(user.getUserId(),roles);
                 sendWelcomeEmail();
             }
             myDetails.setUserDto(userToDto(user));
-            myDetails.setShowDetails(getTrackedShowsByUserId(user == null ? uuid : user.getUserId()));
+            myDetails.setShowDetails(getTrackedShowsByUserId(user.getUserId()));
             responseDto.setData(myDetails);
             return buildResponse(responseDto);
         }
@@ -75,6 +74,9 @@ public class UserService {
 
 
     public UserDto userToDto(User user) {
+        if (user == null) {
+            return null;
+        }
         UserDto userDto = new UserDto();
         try{
             userDto = objectMapper.convertValue(user, UserDto.class);
@@ -85,15 +87,14 @@ public class UserService {
         return userDto;
     }
 
-    private UUID createNewUser(String email) {
+    private User createNewUser(String email) {
         User user = new User();
         user.setEmail(email);
         user.setUsername(email.substring(0,email.indexOf("@")));
         UUID uuid = authService.extractUserId();
         user.setUserId(uuid != null ? uuid : UUID.randomUUID());
         user.setName(authService.extractUserName());
-        user = userRepo.save(user);
-        return user.getUserId();
+        return userRepo.save(user);
     }
 
 
@@ -131,6 +132,9 @@ public class UserService {
             responseDto.setStatusCode(200);
         }
         catch(Exception e){
+            if (responseDto.getStatusCode() == 200) {
+                responseDto.setStatusCode(resolveStatusCode(e));
+            }
             responseDto.setMessage(e.getMessage());
             responseDto.setStatus(false);
             return buildResponse(responseDto);
@@ -163,9 +167,11 @@ public class UserService {
             responseDto.setStatusCode(200);
         }
         catch(Exception e){
+            if (responseDto.getStatusCode() == 200) {
+                responseDto.setStatusCode(resolveStatusCode(e));
+            }
             responseDto.setMessage(e.getMessage());
             responseDto.setStatus(false);
-//            responseDto.setStatusCode(500);
             return buildResponse(responseDto);
         }
         return buildResponse(responseDto);
@@ -196,5 +202,18 @@ public class UserService {
             responseDto.setStatusCode(500);
             return buildResponse(responseDto);
         }
+    }
+
+    private int resolveStatusCode(Exception exception) {
+        if (exception instanceof ResponseStatusException responseStatusException) {
+            return responseStatusException.getStatusCode().value();
+        }
+        if (exception instanceof IllegalArgumentException) {
+            return HttpStatus.BAD_REQUEST.value();
+        }
+        if (exception instanceof IllegalStateException) {
+            return HttpStatus.CONFLICT.value();
+        }
+        return HttpStatus.INTERNAL_SERVER_ERROR.value();
     }
 }

@@ -15,7 +15,7 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http,
-                                    FirebaseAuthenticationFilter firebaseFilter) throws Exception {
+                                    FirebaseAuthenticationFilter firebaseFilter) {
 
         http
                 .csrf(csrf -> csrf.disable())
