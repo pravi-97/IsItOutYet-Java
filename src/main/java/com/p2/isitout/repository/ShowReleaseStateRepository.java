@@ -13,4 +13,6 @@ public interface ShowReleaseStateRepository extends JpaRepository<ShowReleaseSta
 
     @Query("SELECT s FROM ShowReleaseState s WHERE s.nextEpisodeAirDate IS NOT NULL")
     List<ShowReleaseState> findStatesWithNextEpisode();
+
+    List<ShowReleaseState> findAllByShow_StatusIn(List<String> running);
 }

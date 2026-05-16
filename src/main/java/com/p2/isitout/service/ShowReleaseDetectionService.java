@@ -39,7 +39,8 @@ public class ShowReleaseDetectionService {
         log.info("Starting ShowReleaseDetectionService on {} ", LocalDateTime.now());
         Instant start = Instant.now();
         Map<UUID, TvMazeShowDto> tvMazeMap = new HashMap<>();
-        List<ShowReleaseState> showReleaseStates = showReleaseStateRepository.findAllByShow_Status("Running");
+        List<ShowReleaseState> showReleaseStates = showReleaseStateRepository.findAllByShow_StatusIn(List.of("Running", "To Be Determined", "In Development", "Planned"));
+
         showReleaseStates.forEach(shows -> {
             TvMazeShowDto tvMazeShowDto = tvMazeClient.getShowByImdbId(shows.getShow().getImdbId());
             tvMazeMap.put(shows.getShowId(), tvMazeShowDto);
@@ -61,6 +62,10 @@ public class ShowReleaseDetectionService {
             String dbStatus = state.getShow().getStatus();
             dbStatus = dbStatus == null ? "Running" : dbStatus;
 
+            if (apiStatus != null && !apiStatus.equalsIgnoreCase(dbStatus)) {
+                state.getShow().setStatus(apiStatus);
+            }
+
             if (!isEndedStatus(dbStatus) && isEndedStatus(apiStatus)) {
                 handleShowEnded(state);
                 state.getShow().setStatus(apiStatus);
@@ -77,6 +82,11 @@ public class ShowReleaseDetectionService {
                 continue;
             }
 
+            if (!"Running".equalsIgnoreCase(apiStatus)) {
+                state.setLastFetchedAt(Instant.now());
+                showReleaseStateRepository.save(state);
+                continue;
+            }
             TvMazeShowDto.NextEpisode nextEpApi = apiData.getLinks().getNextepisode();
             if (nextEpApi == null) {
                 if (state.getNextEpisodeNumber() != null) {
