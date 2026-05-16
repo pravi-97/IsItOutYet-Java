@@ -47,7 +47,7 @@ public class NotificationLog {
     private Instant sentAt;
     private Instant failedAt;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String lastError;
 
     @Column(name = "idempotency_key", nullable = false)
