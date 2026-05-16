@@ -15,7 +15,7 @@ public class User {
 
     @Id
     private UUID userId;
-
+    private String timeZone;
     private String username;
     private String email;
     private String name;

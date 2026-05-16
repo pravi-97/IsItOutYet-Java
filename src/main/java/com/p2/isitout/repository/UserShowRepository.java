@@ -17,7 +17,7 @@ public interface UserShowRepository extends JpaRepository<UserShow, UserShowId> 
 
     List<UserShow> findByShow_ShowIdAndIsTrackingTrueAndNotifyNewEpisodeTrue(UUID showId);
 
-    @Query(value = "select tmdb_id from shows s join user_shows us on s.show_id = us.show_id where us.user_id = :userId", nativeQuery = true)
+    @Query(value = "select tmdb_id from shows s join user_shows us on s.show_id = us.show_id where us.user_id = :userId order by start_date desc", nativeQuery = true)
     List<String> findShowsByUserIds(UUID userId);
 
     List<UserShow> findByShow_ShowIdAndNotifySeasonConfirmedTrue(UUID showId);
@@ -31,4 +31,6 @@ public interface UserShowRepository extends JpaRepository<UserShow, UserShowId> 
     void deleteByShow_ShowIdAndUser_UserId(UUID showId, UUID userId);
 
     void deleteByUser_UserId(UUID userId);
+
+    List<UserShow> findByUser_UserIdOrderByShow_StartDateDesc(UUID userId);
 }

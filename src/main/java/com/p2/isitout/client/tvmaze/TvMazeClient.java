@@ -1,5 +1,6 @@
 package com.p2.isitout.client.tvmaze;
 
+import com.p2.isitout.client.tvmaze.dto.TvMazeEpisodeDto;
 import com.p2.isitout.client.tvmaze.dto.TvMazeShowDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -58,11 +59,48 @@ public class TvMazeClient {
         return null;
     }
 
-    public <T> T getDataFromTvMazeApi(
-            String path,
-            Map<String, String> queryParams,
-            Class<T> responseType
-    ) {
+    public TvMazeEpisodeDto getEpisodeBySeasonAndNumber(Long tvMazeShowId, Integer seasonNumber, Integer episodeNumber) {
+        int maxRetries = 3;
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                return webClient.get()
+                        .uri(uriBuilder -> uriBuilder
+                                .path("/shows/{id}/episodebynumber")
+                                .queryParam("season", seasonNumber)
+                                .queryParam("number", episodeNumber)
+                                .build(tvMazeShowId)
+                        )
+                        .retrieve()
+                        .bodyToMono(TvMazeEpisodeDto.class)
+                        .block();
+
+            } catch (WebClientResponseException.TooManyRequests ex) {
+                if (attempt == BACKOFF_MILLIS.length) {
+                    throw ex;
+                }
+
+                long delay = resolveRetryAfterOrDefault(
+                        ex,
+                        BACKOFF_MILLIS[attempt - 1]
+                );
+
+                try {
+                    Thread.sleep(delay);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("Retry interrupted", ie);
+                }
+
+            } catch (WebClientResponseException ex) {
+                throw ex;
+            }
+        }
+
+        return null;
+    }
+
+    public <T> T getDataFromTvMazeApi(String path, Map<String, String> queryParams, Class<T> responseType) {
         int maxRetries = 3;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
