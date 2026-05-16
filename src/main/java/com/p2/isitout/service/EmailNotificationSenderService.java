@@ -154,6 +154,7 @@ public class EmailNotificationSenderService {
                 .replace("{{bannerUrl}}", bannerUrls.get(tmdbId))
                 .replace("{{episodeTitle}}", tvMazeShowDetails.getName() != null ? tvMazeShowDetails.getName() : "")
                 .replace("{{showUrl}}", showLinkMap.get(tmdbId));
+        System.out.println("BANNER: "+bannerUrls.get(tmdbId));
         return Map.of("subject", subject, "body", emailBody);
     }
 
