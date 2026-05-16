@@ -173,6 +173,9 @@ public class EmailNotificationSenderService {
     }
 
     private String formatAirDate(String airStamp, String timeZone) {
+        if (airStamp == null || airStamp.isBlank()) {
+            return "Unknown";
+        }
         OffsetDateTime utcDateTime = OffsetDateTime.parse(airStamp);
         ZoneId zoneId = (timeZone == null || timeZone.isBlank()) ? ZoneOffset.UTC : ZoneId.of(timeZone);
         return utcDateTime.atZoneSameInstant(zoneId)
