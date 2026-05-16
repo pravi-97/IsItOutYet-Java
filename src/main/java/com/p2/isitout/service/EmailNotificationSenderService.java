@@ -111,21 +111,13 @@ public class EmailNotificationSenderService {
     }
 
     private Map<UUID, User> fetchUserDetails(List<NotificationLog> notificationLogList) {
-        List<UUID> userIds = notificationLogList.stream()
-                .map(NotificationLog::getUserId)
-                .distinct()
-                .toList();
-        return userRepository.findAllById(userIds)
-                .stream()
-                .collect(Collectors.toMap(User::getUserId, Function.identity()));
+        List<UUID> userIds = notificationLogList.stream().map(NotificationLog::getUserId).distinct().toList();
+        return userRepository.findAllById(userIds).stream().collect(Collectors.toMap(User::getUserId, Function.identity()));
     }
 
-    private ZeptoMailRequest createMailRequest(User user, NotificationLog notificationLog,
-                                               Map<NotificationType, EmailTemplate> emailTemplateMap,
-                                               Map<UUID, ShowReleaseState> showReleaseStateMap,
-                                               Map<Integer, TvMazeEpisodeDto> showCache,
-                                               Map<String, String> bannerUrls,
-                                               Map<String, String> showLinkMap) {
+    private ZeptoMailRequest createMailRequest(User user, NotificationLog notificationLog, Map<NotificationType, EmailTemplate> emailTemplateMap,
+                                               Map<UUID, ShowReleaseState> showReleaseStateMap, Map<Integer, TvMazeEpisodeDto> showCache,
+                                               Map<String, String> bannerUrls, Map<String, String> showLinkMap) {
         String userName = (user.getName() == null || user.getName().isEmpty()) ? user.getUsername() : user.getName();
         Map<String, String> emailParams = getEmailParams(notificationLog, userName, emailTemplateMap, showReleaseStateMap, user.getTimeZone(), showCache, bannerUrls, showLinkMap);
         return new ZeptoMailRequest(
@@ -136,26 +128,18 @@ public class EmailNotificationSenderService {
         );
     }
 
-    private Map<String, String> getEmailParams(NotificationLog notificationLog, String userName,
-                                               Map<NotificationType, EmailTemplate> emailTemplateMap,
-                                               Map<UUID, ShowReleaseState> showReleaseStateMap,
-                                               String timeZone,
-                                               Map<Integer, TvMazeEpisodeDto> showCache,
-                                               Map<String, String> bannerUrls,
-                                               Map<String, String> showLinkMap) {
+    private Map<String, String> getEmailParams(NotificationLog notificationLog, String userName, Map<NotificationType, EmailTemplate> emailTemplateMap, Map<UUID, ShowReleaseState> showReleaseStateMap, String timeZone, Map<Integer, TvMazeEpisodeDto> showCache, Map<String, String> bannerUrls, Map<String, String> showLinkMap) {
         ShowReleaseState showReleaseState = showReleaseStateMap.get(notificationLog.getShowId());
         if (showReleaseState == null) throw new RuntimeException("Show release state not found");
 
         EmailTemplate emailTemp = emailTemplateMap.get(notificationLog.getNotificationType());
         if (emailTemp == null) throw new RuntimeException("Email template not found");
 
-        TvMazeEpisodeDto tvMazeShowDetails = getShowDetails(
-                showReleaseState.getShow().getTvmazeId(),
-                notificationLog.getSeasonNumber(),
-                notificationLog.getEpisodeNumber(),
-                showCache
-        );
-
+        TvMazeEpisodeDto tvMazeShowDetails = new TvMazeEpisodeDto();
+        NotificationType notificationType =  notificationLog.getNotificationType();
+        if(!notificationType.equals(NotificationType.SHOW_CANCELLED) && !notificationType.equals(NotificationType.SHOW_ENDED)){
+            tvMazeShowDetails = getShowDetails(showReleaseState.getShow().getTvmazeId(), notificationLog.getSeasonNumber(), notificationLog.getEpisodeNumber(), showCache);
+        }
         String tmdbId = showReleaseState.getShow().getTmdbId();
         ensureTmdbDataCached(tmdbId, bannerUrls, showLinkMap);
 
