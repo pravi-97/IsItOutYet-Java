@@ -20,9 +20,9 @@ public class TestController {
 
     @PostMapping("/send/mail")
     public Object sendEMail(){
-//        showReleaseDetectionService.detectAndProcessNewReleases();
-//        episodeNotificationEnqueuerService.enqueue();
-//        emailNotificationSenderService.sendEmails(NotificationLog.NotificationStatus.PENDING);
+        showReleaseDetectionService.detectAndProcessNewReleases();
+        episodeNotificationEnqueuerService.enqueue();
+        emailNotificationSenderService.sendEmails(NotificationLog.NotificationStatus.PENDING);
         return "Success";
     }
 

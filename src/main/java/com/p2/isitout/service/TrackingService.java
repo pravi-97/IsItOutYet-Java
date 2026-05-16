@@ -23,6 +23,7 @@ import com.p2.isitout.security.AuthService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,65 +48,49 @@ public class TrackingService {
     private final ShowReleaseStateRepository showReleaseStateRepository;
     private final UserRepository userRepository;
 
-//    @Transactional
-    public ResponseEntity<ResponseDTO> createNew(TrackShowRequest trackShowRequest) {
-        ResponseDTO responseDto = createDefaultResponseDTO();
-        try{
-            if(trackShowRequest.getTmdbId() == null || trackShowRequest.getTmdbId().isEmpty()){
-                responseDto.setStatusCode(400);
-                throw new IllegalArgumentException("TmdbId is required");
-            }
-            String imdbId = tmdbClient.getImdbId(trackShowRequest.getTmdbId());
-            if (imdbId == null || imdbId.isBlank()) {
-                responseDto.setStatusCode(404);
-                throw new IllegalStateException("IMDb ID not found for TMDB show " + trackShowRequest.getTmdbId());
-            }
-
-            UUID userId = authService.extractUserId();
-            if (userId == null) {
-                responseDto.setStatusCode(401);
-                throw new IllegalStateException("Authenticated user ID not found");
-            }
-
-            Show show = showRepo.findByImdbId(imdbId);
-            if (show == null) {
-                show = createNewShow(imdbId, trackShowRequest.getTmdbId());
-            }
-            UserShow userShow = new UserShow();
-            boolean notifyNewEpisode = trackShowRequest.isNotifyNewEpisode()
-                    || trackShowRequest.isNotifyEpisodeDayBefore()
-                    || trackShowRequest.isNotifyEpisodeOnReleaseDay()
-                    || trackShowRequest.isNotifyEpisodeAfterRelease();
-            userShow.setTracking(trackShowRequest.isTracking());
-            userShow.setNotifyNewSeason(trackShowRequest.isNotifyNewSeason());
-            userShow.setNotifyNewEpisode(notifyNewEpisode);
-            userShow.setNotifyEpisodeDayBefore(trackShowRequest.isNotifyEpisodeDayBefore());
-            userShow.setNotifyEpisodeOnReleaseDay(trackShowRequest.isNotifyEpisodeOnReleaseDay());
-            userShow.setNotifyEpisodeAfterRelease(trackShowRequest.isNotifyEpisodeAfterRelease());
-            userShow.setNotifySeasonConfirmed(trackShowRequest.isNotifySeasonConfirmed());
-            User user = getUserFromEmail();
-            if (user == null) {
-                responseDto.setStatusCode(404);
-                throw new IllegalStateException("User not found for authenticated email");
-            }
-            userShow.setUser(user);
-            userShow.setShow(show);
-            userShow.setAddedAt(Instant.now());
-            UserShowId userShowId = new UserShowId();
-            userShowId.setShowId(show.getShowId());
-            userShowId.setUserId(userId);
-            userShow.setId(userShowId);
-            userShowRepository.save(userShow);
-            //TODO: sendEmail
-            return buildResponse(responseDto);
-        } catch (RuntimeException e) {
-            if (responseDto.getStatusCode() == 200) {
-                responseDto.setStatusCode(500);
-            }
-            responseDto.setMessage(e.getMessage());
-            responseDto.setStatus(false);
-            return buildResponse(responseDto);
+    public void createNew(TrackShowRequest trackShowRequest) {
+        if (trackShowRequest.getTmdbId() == null || trackShowRequest.getTmdbId().isEmpty()) {
+            throw new IllegalArgumentException("TmdbId is required");
         }
+        String imdbId = tmdbClient.getImdbId(trackShowRequest.getTmdbId());
+        if (imdbId == null || imdbId.isBlank()) {
+            throw new IllegalStateException("IMDb ID not found for TMDB show " + trackShowRequest.getTmdbId());
+        }
+
+        UUID userId = authService.extractUserId();
+        if (userId == null) {
+            throw new AccessDeniedException("Authenticated user ID not found");
+        }
+
+        Show show = showRepo.findByImdbId(imdbId);
+        if (show == null) {
+            show = createNewShow(imdbId, trackShowRequest.getTmdbId());
+        }
+        UserShow userShow = new UserShow();
+        boolean notifyNewEpisode = trackShowRequest.isNotifyNewEpisode() ||
+                trackShowRequest.isNotifyEpisodeDayBefore() ||
+                trackShowRequest.isNotifyEpisodeOnReleaseDay() ||
+                trackShowRequest.isNotifyEpisodeAfterRelease();
+        userShow.setTracking(trackShowRequest.isTracking());
+        userShow.setNotifyNewSeason(trackShowRequest.isNotifyNewSeason());
+        userShow.setNotifyNewEpisode(notifyNewEpisode);
+        userShow.setNotifyEpisodeDayBefore(trackShowRequest.isNotifyEpisodeDayBefore());
+        userShow.setNotifyEpisodeOnReleaseDay(trackShowRequest.isNotifyEpisodeOnReleaseDay());
+        userShow.setNotifyEpisodeAfterRelease(trackShowRequest.isNotifyEpisodeAfterRelease());
+        userShow.setNotifySeasonConfirmed(trackShowRequest.isNotifySeasonConfirmed());
+        User user = getUserFromEmail();
+        if (user == null) {
+            throw new IllegalStateException("User not found for authenticated email");
+        }
+        userShow.setUser(user);
+        userShow.setShow(show);
+        userShow.setAddedAt(Instant.now());
+        UserShowId userShowId = new UserShowId();
+        userShowId.setShowId(show.getShowId());
+        userShowId.setUserId(userId);
+        userShow.setId(userShowId);
+        userShowRepository.save(userShow);
+        //TODO: sendEmail
     }
 
     private void createBaseLine(TvMazeShowDto tvMazeShowDto, Show show) {
@@ -115,22 +100,22 @@ public class TrackingService {
         if (tvMazeShowDto.getLinks() != null && tvMazeShowDto.getLinks().getPreviousepisode() != null) {
             previousEpisode = tvMazeClient.getDataFromTvMazeApi(
                     trimBaseUrl(tvMazeShowDto.getLinks().getPreviousepisode().getHref()),
-                    new HashMap<>(),
+                    new HashMap < > (),
                     EpisodeDetails.class
             );
         }
         EpisodeDetails nextEpisode = null;
-        if(tvMazeShowDto.getLinks() != null && tvMazeShowDto.getLinks().getNextepisode() != null){
-            nextEpisode = tvMazeClient.getDataFromTvMazeApi(trimBaseUrl(tvMazeShowDto.getLinks().getNextepisode().getHref()), new HashMap<>(), EpisodeDetails.class);
+        if (tvMazeShowDto.getLinks() != null && tvMazeShowDto.getLinks().getNextepisode() != null) {
+            nextEpisode = tvMazeClient.getDataFromTvMazeApi(trimBaseUrl(tvMazeShowDto.getLinks().getNextepisode().getHref()), new HashMap < > (), EpisodeDetails.class);
         }
         if (previousEpisode != null) {
             showReleaseState.setLastEpisodeNumber(previousEpisode.getNumber());
             showReleaseState.setLastSeasonNumber(previousEpisode.getSeason());
         }
-        if(nextEpisode != null){
+        if (nextEpisode != null) {
             showReleaseState.setNextSeasonNumber(nextEpisode.getSeason());
             showReleaseState.setNextEpisodeNumber(nextEpisode.getNumber());
-            if(nextEpisode.getNumber() != null && nextEpisode.getNumber() == 1){
+            if (nextEpisode.getNumber() != null && nextEpisode.getNumber() == 1) {
                 showReleaseState.setNextSeasonAirDate(parseLocalDate(nextEpisode.getAirdate()));
             }
             showReleaseState.setNextEpisodeAirDate(parseInstant(nextEpisode.getAirstamp()));
@@ -146,24 +131,20 @@ public class TrackingService {
 
     private Show createNewShow(String imdbId, String tmdbId) {
         Show show = new Show();
-        try{
-            TvMazeShowDto tvMazeShowDto = tvMazeClient.getShowByImdbId(imdbId);
-            if (tvMazeShowDto == null) {
-                throw new IllegalStateException("Show details not found in TVMaze for IMDb ID " + imdbId);
-            }
-            show.setImdbId(imdbId);
-            show.setShowId(UUID.randomUUID());
-            show.setTmdbId(tmdbId);
-            show.setTvmazeId(tvMazeShowDto.getId());
-            show.setShowName(tvMazeShowDto.getName());
-            show.setStatus(tvMazeShowDto.getStatus());
-            show.setStartDate(parseLocalDate(tvMazeShowDto.getPremiered()));
-            show.setEndDate(parseLocalDate(tvMazeShowDto.getEnded()));
-            showRepo.save(show);
-            createBaseLine(tvMazeShowDto,show);
-        } catch (RuntimeException e) {
-            throw new RuntimeException(e);
+        TvMazeShowDto tvMazeShowDto = tvMazeClient.getShowByImdbId(imdbId);
+        if (tvMazeShowDto == null) {
+            throw new IllegalStateException("Show details not found in TVMaze for IMDb ID " + imdbId);
         }
+        show.setImdbId(imdbId);
+        show.setShowId(UUID.randomUUID());
+        show.setTmdbId(tmdbId);
+        show.setTvmazeId(tvMazeShowDto.getId());
+        show.setShowName(tvMazeShowDto.getName());
+        show.setStatus(tvMazeShowDto.getStatus());
+        show.setStartDate(parseLocalDate(tvMazeShowDto.getPremiered()));
+        show.setEndDate(parseLocalDate(tvMazeShowDto.getEnded()));
+        showRepo.save(show);
+        createBaseLine(tvMazeShowDto, show);
         return show;
     }
 
@@ -172,55 +153,27 @@ public class TrackingService {
         return uri.getPath();
     }
 
-    private ResponseEntity<ResponseDTO> buildResponse(ResponseDTO responseDto) {
-        HttpStatus status = HttpStatus.resolve(responseDto.getStatusCode());
-
-        if (status == null) {
-            status = HttpStatus.INTERNAL_SERVER_ERROR;
-        }
-        return ResponseEntity
-                .status(status)
-                .body(responseDto);
-    }
-
-    private ResponseDTO createDefaultResponseDTO() {
-        ResponseDTO responseDto = new ResponseDTO();
-        responseDto.setStatusCode(200);
-        responseDto.setStatus(true);
-        return responseDto;
-    }
-
     private User getUserFromEmail() {
         String email = authService.extractEmail();
-        if(email != null && !email.isEmpty()){
+        if (email != null && !email.isEmpty()) {
             return userRepository.findByEmail(email);
         }
         throw new IllegalStateException("Email ID not found in token");
     }
 
-    public ResponseEntity<ResponseDTO> getAllTrackedShows() {
-        List<MyShowListDto> myShowListDtoList = new ArrayList<>();
-        ResponseDTO responseDto = createDefaultResponseDTO();
-        try{
-            UUID userId = authService.extractUserId();
-            List<UserShow> userShowList = userShowRepository.findByUser_UserId(userId);
-            for(UserShow userShow: userShowList){
-                MyShowListDto myShowListDto = new MyShowListDto();
-                Show show = userShow.getShow();
-                myShowListDto.setShowId(show.getShowId());
-                myShowListDto.setUserShowDto(userShowToDto(userShow));
-                myShowListDto.setTmdbTvShowDetailsDto(getTmdbData(show.getTmdbId()));
-                myShowListDtoList.add(myShowListDto);
-            }
-            responseDto.setData(myShowListDtoList);
-            responseDto.setMessage("Fetched All Tracked Shows");
-        }catch (RuntimeException e){
-            responseDto.setStatusCode(500);
-            responseDto.setMessage(e.getMessage());
-            responseDto.setData(null);
-            responseDto.setMessage("Failed to Fetch All Tracked Shows");
+    public List < MyShowListDto > getAllTrackedShows() {
+        List < MyShowListDto > myShowListDtoList = new ArrayList < > ();
+        UUID userId = authService.extractUserId();
+        List < UserShow > userShowList = userShowRepository.findByUser_UserIdOrderByShow_StartDateDesc(userId);
+        for (UserShow userShow: userShowList) {
+            MyShowListDto myShowListDto = new MyShowListDto();
+            Show show = userShow.getShow();
+            myShowListDto.setShowId(show.getShowId());
+            myShowListDto.setUserShowDto(userShowToDto(userShow));
+            myShowListDto.setTmdbTvShowDetailsDto(getTmdbData(show.getTmdbId()));
+            myShowListDtoList.add(myShowListDto);
         }
-        return buildResponse(responseDto);
+        return myShowListDtoList;
     }
 
     private TmdbTvShowDetailsDto getTmdbData(String tmdbId) {
@@ -241,96 +194,62 @@ public class TrackingService {
         dto.setNotifyEpisodeAfterRelease(us.isNotifyEpisodeAfterRelease());
         dto.setNotifySeasonConfirmed(us.isNotifySeasonConfirmed());
         dto.setAddedAt(us.getAddedAt());
-
         return dto;
     }
 
-    public ResponseEntity<ResponseDTO> updateTrackedShows(List<UpdateTrackShow> trackShowRequestList) {
-        ResponseDTO responseDto = createDefaultResponseDTO();
-        List<UserShow> userShowList = new ArrayList<>();
-        try{
-            UUID userId = authService.extractUserId();
-            if (userId == null) {
-                responseDto.setStatusCode(401);
-                throw new IllegalStateException("Authenticated user ID not found");
-            }
-            for(UpdateTrackShow updateTrackShow: trackShowRequestList){
-                if (updateTrackShow.getShowId() == null) {
-                    responseDto.setStatusCode(400);
-                    throw new IllegalArgumentException("Show ID is required");
-                }
-
-                UserShow userShow = userShowRepository.findByUser_UserIdAndShow_ShowId(userId, updateTrackShow.getShowId());
-                if (userShow == null) {
-                    responseDto.setStatusCode(404);
-                    throw new IllegalStateException("Tracked show not found for show ID " + updateTrackShow.getShowId());
-                }
-
-                boolean notifyEpisodeAfterRelease = resolveBoolean(
-                        updateTrackShow.getNotifyEpisodeAfterRelease(),
-                        userShow.isNotifyEpisodeAfterRelease()
-                );
-                boolean notifyEpisodeDayBefore = resolveBoolean(
-                        updateTrackShow.getNotifyEpisodeDayBefore(),
-                        userShow.isNotifyEpisodeDayBefore()
-                );
-                boolean notifyEpisodeOnReleaseDay = resolveBoolean(
-                        updateTrackShow.getNotifyEpisodeOnReleaseDay(),
-                        userShow.isNotifyEpisodeOnReleaseDay()
-                );
-
-                userShow.setTracking(resolveBoolean(updateTrackShow.getTracking(), userShow.isTracking()));
-                userShow.setNotifyEpisodeAfterRelease(notifyEpisodeAfterRelease);
-                userShow.setNotifyEpisodeDayBefore(notifyEpisodeDayBefore);
-                userShow.setNotifyEpisodeOnReleaseDay(notifyEpisodeOnReleaseDay);
-                userShow.setNotifyNewSeason(resolveBoolean(updateTrackShow.getNotifyNewSeason(), userShow.isNotifyNewSeason()));
-                userShow.setNotifySeasonConfirmed(resolveBoolean(updateTrackShow.getNotifySeasonConfirmed(), userShow.isNotifySeasonConfirmed()));
-                userShow.setNotifyNewEpisode(notifyEpisodeAfterRelease || notifyEpisodeDayBefore || notifyEpisodeOnReleaseDay);
-                userShowList.add(userShow);
-            }
-            userShowRepository.saveAll(userShowList);
-            responseDto.setStatusCode(200);
-            responseDto.setMessage("Successfully Updated Tracked Shows");
-        } catch (RuntimeException e) {
-            if (responseDto.getStatusCode() == 200) {
-                responseDto.setStatusCode(500);
-            }
-            responseDto.setStatus(false);
-            responseDto.setData(null);
-            responseDto.setMessage(e.getMessage() != null ? e.getMessage() : "Failed to Update Tracked Shows");
-            return buildResponse(responseDto);
+    public void updateTrackedShows(List < UpdateTrackShow > trackShowRequestList) {
+        List < UserShow > userShowList = new ArrayList < > ();
+        UUID userId = authService.extractUserId();
+        if (userId == null) {
+            throw new IllegalStateException("Authenticated user ID not found");
         }
-        return buildResponse(responseDto);
+        for (UpdateTrackShow updateTrackShow: trackShowRequestList) {
+            if (updateTrackShow.getShowId() == null) {
+                throw new IllegalArgumentException("Show ID is required");
+            }
+
+            UserShow userShow = userShowRepository.findByUser_UserIdAndShow_ShowId(userId, updateTrackShow.getShowId());
+            if (userShow == null) {
+                throw new IllegalStateException("Tracked show not found for show ID " + updateTrackShow.getShowId());
+            }
+
+            boolean notifyEpisodeAfterRelease = resolveBoolean(
+                    updateTrackShow.getNotifyEpisodeAfterRelease(),
+                    userShow.isNotifyEpisodeAfterRelease()
+            );
+            boolean notifyEpisodeDayBefore = resolveBoolean(
+                    updateTrackShow.getNotifyEpisodeDayBefore(),
+                    userShow.isNotifyEpisodeDayBefore()
+            );
+            boolean notifyEpisodeOnReleaseDay = resolveBoolean(
+                    updateTrackShow.getNotifyEpisodeOnReleaseDay(),
+                    userShow.isNotifyEpisodeOnReleaseDay()
+            );
+
+            userShow.setTracking(resolveBoolean(updateTrackShow.getTracking(), userShow.isTracking()));
+            userShow.setNotifyEpisodeAfterRelease(notifyEpisodeAfterRelease);
+            userShow.setNotifyEpisodeDayBefore(notifyEpisodeDayBefore);
+            userShow.setNotifyEpisodeOnReleaseDay(notifyEpisodeOnReleaseDay);
+            userShow.setNotifyNewSeason(resolveBoolean(updateTrackShow.getNotifyNewSeason(), userShow.isNotifyNewSeason()));
+            userShow.setNotifySeasonConfirmed(resolveBoolean(updateTrackShow.getNotifySeasonConfirmed(), userShow.isNotifySeasonConfirmed()));
+            userShow.setNotifyNewEpisode(notifyEpisodeAfterRelease || notifyEpisodeDayBefore || notifyEpisodeOnReleaseDay);
+            userShowList.add(userShow);
+        }
+        userShowRepository.saveAll(userShowList);
     }
 
     @Transactional
-    public ResponseEntity<ResponseDTO> deleteTrackedShows(List<UUID> showIds) {
-        ResponseDTO responseDto = createDefaultResponseDTO();
-        try{
-            UUID userId = authService.extractUserId();
-            if (userId == null) {
-                responseDto.setStatusCode(401);
-                throw new IllegalStateException("Authenticated user ID not found");
-            }
-            for(UUID showId: showIds){
-                if (showId == null) {
-                    responseDto.setStatusCode(400);
-                    throw new IllegalArgumentException("Show ID is required");
-                }
-                userShowRepository.deleteByShow_ShowIdAndUser_UserId(showId, userId);
-            }
-            responseDto.setStatusCode(200);
-            responseDto.setMessage("Successfully Deleted Tracked Shows");
-        } catch (RuntimeException e) {
-            if (responseDto.getStatusCode() == 200) {
-                responseDto.setStatusCode(500);
-            }
-            responseDto.setStatus(false);
-            responseDto.setData(null);
-            responseDto.setMessage(e.getMessage() != null ? e.getMessage() : "Failed to Delete Tracked Shows");
-            return buildResponse(responseDto);
+    public void deleteTrackedShows(List < UUID > showIds) {
+        UUID userId = authService.extractUserId();
+        if (userId == null) {
+            throw new IllegalStateException("Authenticated user ID not found");
         }
-        return buildResponse(responseDto);
+        for (UUID showId: showIds) {
+            if (showId == null) {
+                throw new IllegalArgumentException("Show ID is required");
+            }
+            userShowRepository.deleteByShow_ShowIdAndUser_UserId(showId, userId);
+        }
     }
 
     private boolean resolveBoolean(Boolean requestedValue, boolean currentValue) {
@@ -351,10 +270,10 @@ public class TrackingService {
         }
 
         Instant nextEpisodeAirDate = parseInstant(nextEpisode.getAirstamp());
-        boolean seasonStartsInFuture = nextEpisode.getNumber() != null
-                && nextEpisode.getNumber() == 1
-                && nextEpisodeAirDate != null
-                && nextEpisodeAirDate.isAfter(Instant.now());
+        boolean seasonStartsInFuture = nextEpisode.getNumber() != null &&
+                nextEpisode.getNumber() == 1 &&
+                nextEpisodeAirDate != null &&
+                nextEpisodeAirDate.isAfter(Instant.now());
 
         if (seasonStartsInFuture) {
             return previousSeason != null ? previousSeason : 0;

@@ -1,6 +1,7 @@
 package com.p2.isitout.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.firebase.auth.FirebaseAuthException;
 import com.p2.isitout.client.tmdb.TmdbClient;
 import com.p2.isitout.client.tmdb.dto.TmdbTvShowDetailsDto;
 import com.p2.isitout.dto.ResponseDTO;
@@ -33,39 +34,30 @@ public class UserService {
     private final UserShowRepository userShowRepository;
     private final TmdbClient tmdbClient;
 
-    public ResponseEntity<ResponseDTO> getUserDetails() {
-        ResponseDTO responseDto =  createDefaultResponseDTO();
+    public MyDetailsDto getUserDetails() {
         MyDetailsDto myDetails = new MyDetailsDto();
-        try{
-            final String email = authService.extractEmail();
-            User user = userRepo.findByEmail(email);
-            if(user == null){
-                List<String> roles = new ArrayList<>(List.of("USER"));
-                user = createNewUser(email);
-                authService.setCustomClaims(user.getUserId(),roles);
-                sendWelcomeEmail();
-            }
-            myDetails.setUserDto(userToDto(user));
-            myDetails.setShowDetails(getTrackedShowsByUserId(user.getUserId()));
-            responseDto.setData(myDetails);
-            return buildResponse(responseDto);
+        final String email = authService.extractEmail();
+        User user = userRepo.findByEmail(email);
+        if (user == null) {
+            List < String > roles = new ArrayList < > (List.of("USER"));
+            user = createNewUser(email);
+            authService.setCustomClaims(user.getUserId(), roles);
+            sendWelcomeEmail();
         }
-        catch(Exception e){
-            responseDto.setMessage(e.getMessage());
-            responseDto.setStatus(false);
-            responseDto.setStatusCode(500);
-            return buildResponse(responseDto);
-        }
+        myDetails.setUserDto(userToDto(user));
+        myDetails.setShowDetails(getTrackedShowsByUserId(user.getUserId()));
+        return myDetails;
+
     }
 
     private void sendWelcomeEmail() {
         //TODO: Send welcome Email
     }
 
-    private List<TmdbTvShowDetailsDto> getTrackedShowsByUserId(UUID userId) {
-        List<TmdbTvShowDetailsDto> trackedShows = new ArrayList<>();
-        List<String> showIds = userShowRepository.findShowsByUserIds(userId);
-        for (String showId : showIds) {
+    private List < TmdbTvShowDetailsDto > getTrackedShowsByUserId(UUID userId) {
+        List < TmdbTvShowDetailsDto > trackedShows = new ArrayList < > ();
+        List < String > showIds = userShowRepository.findShowsByUserIds(userId);
+        for (String showId: showIds) {
             TmdbTvShowDetailsDto tmdbTvShow = tmdbClient.getTvShowById(showId);
             trackedShows.add(tmdbTvShow);
         }
@@ -78,10 +70,9 @@ public class UserService {
             return null;
         }
         UserDto userDto = new UserDto();
-        try{
+        try {
             userDto = objectMapper.convertValue(user, UserDto.class);
-        }
-        catch(Exception e){
+        } catch (Exception e) {
             log.error("An error occurred when converting User to UserDto");
         }
         return userDto;
@@ -90,7 +81,7 @@ public class UserService {
     private User createNewUser(String email) {
         User user = new User();
         user.setEmail(email);
-        user.setUsername(email.substring(0,email.indexOf("@")));
+        user.setUsername(email.substring(0, email.indexOf("@")));
         UUID uuid = authService.extractUserId();
         user.setUserId(uuid != null ? uuid : UUID.randomUUID());
         user.setName(authService.extractUserName());
@@ -105,7 +96,7 @@ public class UserService {
         return responseDto;
     }
 
-    private ResponseEntity<ResponseDTO> buildResponse(ResponseDTO responseDto) {
+    private ResponseEntity < ResponseDTO > buildResponse(ResponseDTO responseDto) {
         HttpStatus status = HttpStatus.resolve(responseDto.getStatusCode());
 
         if (status == null) {
@@ -116,104 +107,50 @@ public class UserService {
                 .body(responseDto);
     }
 
-    public ResponseEntity<ResponseDTO> getUserDetailsMini() {
-        ResponseDTO responseDto =  createDefaultResponseDTO();
-        try{
-            UUID userId = authService.extractUserId();
-            Optional<User> userOptional = userRepo.findById(userId);
-            if(userOptional.isEmpty()){
-                responseDto.setStatusCode(404);
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID " + userId);
-            }
-            User user = userOptional.get();
-            responseDto.setData(userToDto(user));
-            responseDto.setMessage("Successfully fetchedUser Details");
-            responseDto.setStatus(true);
-            responseDto.setStatusCode(200);
+    public UserDto getUserDetailsMini() {
+        UUID userId = authService.extractUserId();
+        Optional < User > userOptional = userRepo.findById(userId);
+        if (userOptional.isEmpty()) {
+            throw new IllegalArgumentException("User not found with ID " + userId);
         }
-        catch(Exception e){
-            if (responseDto.getStatusCode() == 200) {
-                responseDto.setStatusCode(resolveStatusCode(e));
-            }
-            responseDto.setMessage(e.getMessage());
-            responseDto.setStatus(false);
-            return buildResponse(responseDto);
-        }
-        return buildResponse(responseDto);
+        User user = userOptional.get();
+        return userToDto(user);
     }
 
-    public ResponseEntity<ResponseDTO> updateUserDetails(String name) {
-        ResponseDTO responseDto =  createDefaultResponseDTO();
-        try{
-            UUID userId = authService.extractUserId();
-            Optional<User> userOptional = userRepo.findById(userId);
-            if(userOptional.isEmpty()){
-                responseDto.setStatusCode(404);
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID " + userId);
-            }
-            User user = userOptional.get();
-            if(name == null || name.trim().isEmpty()){
-                responseDto.setStatusCode(400);
-                throw new IllegalArgumentException("User name cannot be null or empty");
-            }
-            if(user.getName() != null && !user.getName().isEmpty()){
-                responseDto.setStatusCode(409);
-                throw new IllegalStateException("User's Name cannot be updated because name already exist!");
-            }
-            user.setName(name.trim());
-            userRepo.save(user);
-            responseDto.setMessage("Successfully updated User Details");
-            responseDto.setStatus(true);
-            responseDto.setStatusCode(200);
+    public void updateUserDetails(String name) {
+        UUID userId = authService.extractUserId();
+        Optional < User > userOptional = userRepo.findById(userId);
+        if (userOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID " + userId);
         }
-        catch(Exception e){
-            if (responseDto.getStatusCode() == 200) {
-                responseDto.setStatusCode(resolveStatusCode(e));
-            }
-            responseDto.setMessage(e.getMessage());
-            responseDto.setStatus(false);
-            return buildResponse(responseDto);
+        User user = userOptional.get();
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("User name cannot be null or empty");
         }
-        return buildResponse(responseDto);
+        if (user.getName() != null && !user.getName().isEmpty()) {
+            throw new IllegalArgumentException("User's Name cannot be updated because name already exist!");
+        }
+        user.setName(name.trim());
+        userRepo.save(user);
     }
 
-    public ResponseEntity<ResponseDTO> deleteUser() {
-        ResponseDTO responseDto =  createDefaultResponseDTO();
-        try{
-            final String email = authService.extractEmail();
-            User user = userRepo.findByEmail(email);
-            if(user == null){
-                responseDto.setStatusCode(404);
-                responseDto.setStatus(false);
-                responseDto.setMessage("User not found with email " + email);
-                return buildResponse(responseDto);
-            }
-            userShowRepository.deleteByUser_UserId(user.getUserId());
-            userRepo.deleteById(user.getUserId());
-            authService.deleteUser();
-            responseDto.setStatusCode(200);
-            responseDto.setStatus(true);
-            responseDto.setMessage("User Account Deleted Successfully");
-            return buildResponse(responseDto);
+    public void deleteUser() {
+        final String email = authService.extractEmail();
+        User user = userRepo.findByEmail(email);
+        if (user == null) {
+            throw new IllegalArgumentException("User not found with email " + email);
         }
-        catch(Exception e){
-            responseDto.setMessage(e.getMessage());
-            responseDto.setStatus(false);
-            responseDto.setStatusCode(500);
-            return buildResponse(responseDto);
-        }
+        userShowRepository.deleteByUser_UserId(user.getUserId());
+        userRepo.deleteById(user.getUserId());
+        authService.deleteUser();
     }
 
-    private int resolveStatusCode(Exception exception) {
-        if (exception instanceof ResponseStatusException responseStatusException) {
-            return responseStatusException.getStatusCode().value();
-        }
-        if (exception instanceof IllegalArgumentException) {
-            return HttpStatus.BAD_REQUEST.value();
-        }
-        if (exception instanceof IllegalStateException) {
-            return HttpStatus.CONFLICT.value();
-        }
-        return HttpStatus.INTERNAL_SERVER_ERROR.value();
+
+    public void updateUserTimeZone(String timeZone) {
+        final String email = authService.extractEmail();
+        User user = userRepo.findByEmail(email);
+        user.setTimeZone(timeZone);
+        userRepo.save(user);
     }
+
 }

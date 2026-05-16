@@ -41,16 +41,23 @@ public class AuthService {
         return getTokenFromContext().getUid();
     }
 
-    public void setCustomClaims(@NonNull UUID userId, List<String> roles) throws FirebaseAuthException {
+    public void setCustomClaims(@NonNull UUID userId, List<String> roles) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("internal_user_id", userId.toString());
         claims.put("roles", roles);
-
-        FirebaseAuth.getInstance().setCustomUserClaims(extractFirebaseUid(), claims);
+        try{
+            FirebaseAuth.getInstance().setCustomUserClaims(extractFirebaseUid(), claims);
+        } catch (FirebaseAuthException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    public void deleteUser() throws FirebaseAuthException {
-        FirebaseAuth.getInstance().deleteUser(extractFirebaseUid());
+    public void deleteUser() {
+        try{
+            FirebaseAuth.getInstance().deleteUser(extractFirebaseUid());
+        } catch (FirebaseAuthException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public String extractUserName() {
