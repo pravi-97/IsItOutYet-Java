@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -44,7 +45,7 @@ public class EmailNotificationSenderService {
     private final TmdbClient tmdbClient;
     private final TvMazeClient tvMazeClient;
 
-
+    @Transactional
     public void sendEmails(NotificationLog.NotificationStatus notificationStatus) {
         log.info("Starting EmailNotificationSenderService on {}", LocalDateTime.now());
         Map<Integer, TvMazeEpisodeDto> showCache = new HashMap<>();
