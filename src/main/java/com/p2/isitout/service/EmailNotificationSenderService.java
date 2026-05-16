@@ -10,6 +10,7 @@ import com.p2.isitout.client.tvmaze.dto.TvMazeEpisodeDto;
 import com.p2.isitout.entity.*;
 import com.p2.isitout.repository.*;
 import com.p2.isitout.utils.ApplicationConstants;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +26,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class EmailNotificationSenderService {
+
+    private final ShowReleaseStateRepository showReleaseStateRepository;
 
     @Value("${notification.max.retries}")
     private Integer maxRetries;
