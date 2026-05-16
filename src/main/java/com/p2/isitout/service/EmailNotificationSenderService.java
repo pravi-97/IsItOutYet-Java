@@ -27,8 +27,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EmailNotificationSenderService {
 
-    private final ShowReleaseStateRepository showReleaseStateRepository;
-
     @Value("${notification.max.retries}")
     private Integer maxRetries;
 
